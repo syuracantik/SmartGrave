@@ -21,7 +21,7 @@
                 <i class="fas fa-user-plus"></i> <span>Laporan Strategik</span>
             </a>
             <hr class="border-emerald-800/50 my-6">
-            <a href="index.html" class="flex items-center space-x-4 p-4 text-rose-300 hover:bg-rose-500/10 rounded-2xl transition font-semibold">
+            <a href="index.php" class="flex items-center space-x-4 p-4 text-rose-300 hover:bg-rose-500/10 rounded-2xl transition font-semibold">
                 <i class="fas fa-sign-out-alt"></i> <span>Log Keluar</span>
             </a>
         </nav>

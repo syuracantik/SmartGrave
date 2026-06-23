@@ -39,7 +39,7 @@
                 <span class="text-2xl font-bold text-emerald-900 tracking-tight">Smart<span class="text-emerald-600">Grave</span></span>
             </div>
             <div class="hidden md:flex space-x-8 font-medium text-emerald-900">
-                <a href="index.html" class="text-emerald-600 font-bold">Laman Utama</a>
+                <a href="index.php" class="text-emerald-600 font-bold">Laman Utama</a>
                 <a href="carian.php" class="hover:text-emerald-600 transition">Cari Pusara</a>
                 <a href="login.php" class="hover:text-emerald-600 transition">Permohonan Lot</a>
                 <a href="login.php" class="hover:text-emerald-600 transition">Daftar Khairat</a>

@@ -66,7 +66,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     <div class="glass-card w-full max-w-md rounded-[2rem] shadow-[0_20px_50px_rgba(0,0,0,0.3)] overflow-hidden border border-white/20">
         
         <div class="p-10 text-center relative bg-white">
-            <a href="index.html" class="absolute left-8 top-10 text-gray-400 hover:text-emerald-700 transition-colors">
+            <a href="index.php" class="absolute left-8 top-10 text-gray-400 hover:text-emerald-700 transition-colors">
                 <i class="fas fa-arrow-left"></i>
             </a>
             
