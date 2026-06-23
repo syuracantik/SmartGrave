@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+    <meta charset="UTF-8">
+    <title>Pembayaran SmartGrave | Urusan Pengebumian</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-50 py-10 px-4">
+
+    <div class="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8">
+        
+        <div class="md:col-span-1 space-y-6">
+            <div class="bg-white p-6 rounded-3xl shadow-lg border border-emerald-50">
+                <h3 class="text-lg font-bold text-emerald-900 mb-4">Ringkasan Tempahan</h3>
+                <div class="space-y-4 text-sm">
+                    <div class="flex justify-between text-gray-500">
+                        <span>Kos Lot Pusara</span>
+                        <span>RM 1,100.00</span>
+                    </div>
+                    <div id="extraFeeRow" class="flex justify-between text-gray-500 hidden">
+                        <span>Pendaftaran (Bukan Ahli)</span>
+                        <span>RM 30.00</span>
+                    </div>
+                    <hr class="border-dashed">
+                    <div class="flex justify-between text-xl font-bold text-emerald-900">
+                        <span>Jumlah Total</span>
+                        <span id="displayTotal">RM 1,100.00</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-emerald-900 p-6 rounded-3xl text-white shadow-lg">
+                <p class="text-xs opacity-70 uppercase tracking-widest mb-2 font-bold">Nota Kebajikan</p>
+                <p class="text-sm leading-relaxed">Sekiranya waris menghadapi kesulitan kewangan, sila pilih butang <strong>"Bantuan Kebajikan"</strong> untuk berhubung terus dengan pihak pentadbir masjid.</p>
+            </div>
+        </div>
+
+        <div class="md:col-span-2 bg-white p-8 rounded-3xl shadow-xl border border-gray-100">
+            <h2 class="text-2xl font-bold text-gray-800 mb-8">Pilih Kaedah Pembayaran</h2>
+
+            <div class="space-y-4">
+                <label class="block border-2 border-emerald-600 p-4 rounded-2xl cursor-pointer bg-emerald-50/50 transition">
+                    <div class="flex justify-between items-center">
+                        <div class="flex items-center">
+                            <input type="radio" name="payMethod" checked class="w-5 h-5 text-emerald-600">
+                            <span class="ml-4 font-bold text-gray-700">Online Banking (FPX)</span>
+                        </div>
+                        <img src="https://upload.wikimedia.org/wikipedia/commons/a/a2/FPX_logo.png" class="h-6">
+                    </div>
+                </label>
+
+                <label class="block border-2 border-gray-100 p-4 rounded-2xl cursor-pointer hover:border-emerald-200 transition">
+                    <div class="flex justify-between items-center">
+                        <div class="flex items-center">
+                            <input type="radio" name="payMethod" class="w-5 h-5 text-emerald-600">
+                            <span class="ml-4 font-bold text-gray-700">Kad Kredit / Debit</span>
+                        </div>
+                        <div class="flex space-x-2">
+                            <i class="fab fa-cc-visa text-2xl text-blue-800"></i>
+                            <i class="fab fa-cc-mastercard text-2xl text-red-600"></i>
+                        </div>
+                    </div>
+                </label>
+
+                <label class="block border-2 border-gray-100 p-4 rounded-2xl cursor-pointer hover:border-emerald-200 transition">
+                    <div class="flex justify-between items-center">
+                        <div class="flex items-center">
+                            <input type="radio" name="payMethod" class="w-5 h-5 text-emerald-600">
+                            <span class="ml-4 font-bold text-gray-700">E-Wallet (TNG / Grab)</span>
+                        </div>
+                        <i class="fas fa-wallet text-xl text-emerald-600"></i>
+                    </div>
+                </label>
+            </div>
+
+            <div class="mt-10 space-y-4">
+                <button onclick="processPayment()" class="w-full bg-emerald-700 text-white py-5 rounded-2xl font-bold text-lg shadow-xl shadow-emerald-100 hover:bg-emerald-800 transition">
+                    Bayar Sekarang
+                </button>
+                <button class="w-full bg-white text-emerald-700 border-2 border-emerald-700 py-4 rounded-2xl font-bold hover:bg-emerald-50 transition">
+                    Bantuan Kebajikan (Masalah Kewangan)
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="successModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center p-4 z-50">
+        <div class="bg-white p-10 rounded-3xl max-w-sm w-full text-center shadow-2xl">
+            <div class="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-6 text-3xl">
+                <i class="fas fa-check"></i>
+            </div>
+            <h2 class="text-2xl font-bold text-gray-800 mb-2">Bayaran Berjaya!</h2>
+            <p class="text-gray-500 mb-8">Resit dan koordinat lokasi pusara telah dihantar ke emel anda.</p>
+            <button onclick="window.location.href='carian.html'" class="w-full bg-emerald-700 text-white py-4 rounded-xl font-bold">Lihat Lokasi Pusara</button>
+        </div>
+    </div>
+
+    <script>
+        // Ambil data total dari URL (Simulasi)
+        const params = new URLSearchParams(window.location.search);
+        const isMember = params.get('khairat') === 'true';
+
+        if(!isMember) {
+            document.getElementById('extraFeeRow').classList.remove('hidden');
+            document.getElementById('displayTotal').innerText = "RM 1,130.00";
+        }
+
+        function processPayment() {
+            document.getElementById('successModal').classList.replace('hidden', 'flex');
+        }
+    </script>
+</body>
+</html>

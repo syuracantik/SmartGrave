@@ -1,0 +1,935 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SmartGrave — Sistem Perkuburan Digital</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<style>
+:root {
+  --bg: #f5f7f5;
+  --surface: #ffffff;
+  --panel: #f9fbf9;
+  --border: #e4ebe4;
+  --border2: #d0dbd0;
+  --green: #1d7a3e;
+  --green-l: #2a9d52;
+  --green-xl: #e8f5ec;
+  --green-xxl: #f2faf4;
+  --gold: #b08030;
+  --gold-l: #fdf3dc;
+  --zone-a: #2563eb;
+  --zone-a-l: #eff6ff;
+  --zone-b: #7c3aed;
+  --zone-b-l: #f5f3ff;
+  --zone-c: #b45309;
+  --zone-c-l: #fffbeb;
+  --text: #1a2e1a;
+  --text2: #3d5c3d;
+  --muted: #7a9a7a;
+  --red: #dc2626;
+  --red-l: #fef2f2;
+  --r: 12px;
+  --r-lg: 18px;
+  --shadow: 0 1px 3px rgba(0,0,0,.08), 0 4px 16px rgba(0,0,0,.05);
+  --shadow-md: 0 4px 20px rgba(0,0,0,.1), 0 1px 4px rgba(0,0,0,.06);
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%;overflow:hidden}
+body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);color:var(--text);display:flex;flex-direction:column}
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:4px}
+
+/* ── HEADER ── */
+header{
+  flex-shrink:0;height:60px;background:var(--surface);
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;padding:0 24px;gap:0;
+  position:relative;z-index:9999;
+  box-shadow:0 1px 0 var(--border), var(--shadow);
+}
+.hdr-brand{display:flex;align-items:center;gap:10px;text-decoration:none}
+.hdr-icon{
+  width:36px;height:36px;
+  background:linear-gradient(135deg,var(--green),var(--green-l));
+  border-radius:10px;display:flex;align-items:center;justify-content:center;
+  font-size:18px;box-shadow:0 2px 8px rgba(29,122,62,.3)
+}
+.hdr-name{font-size:18px;font-weight:800;color:var(--text);letter-spacing:-.3px}
+.hdr-name em{color:var(--green);font-style:normal}
+.hdr-divider{width:1px;height:26px;background:var(--border);margin:0 18px}
+.hdr-tag{
+  font-size:11px;font-weight:600;color:var(--green);
+  background:var(--green-xl);border:1px solid rgba(29,122,62,.18);
+  padding:4px 12px;border-radius:20px;letter-spacing:.3px
+}
+.hdr-spacer{flex:1}
+.hdr-status{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);font-family:'DM Mono',monospace}
+.hdr-dot{width:7px;height:7px;border-radius:50%;background:#22c55e;box-shadow:0 0 6px #22c55e;animation:blink 2s ease-in-out infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.4}}
+.hdr-stats{display:flex;gap:1px;margin-left:18px}
+.hdr-stat{
+  background:var(--panel);border:1px solid var(--border);
+  padding:5px 14px;font-family:'DM Mono',monospace;font-size:11px;color:var(--muted)
+}
+.hdr-stat:first-child{border-radius:8px 0 0 8px}
+.hdr-stat:last-child{border-radius:0 8px 8px 0}
+.hdr-stat strong{color:var(--text);font-weight:700;display:block;font-size:14px}
+
+/* ── LAYOUT ── */
+.layout{flex:1;display:grid;grid-template-columns:340px 1fr;overflow:hidden}
+
+/* ── SIDEBAR ── */
+.sidebar{background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
+.search-block{padding:16px 16px 12px;border-bottom:1px solid var(--border);background:var(--surface)}
+.search-label{
+  font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;
+  color:var(--muted);margin-bottom:10px;display:flex;align-items:center;gap:8px
+}
+.search-label::after{content:'';flex:1;height:1px;background:var(--border)}
+.search-row{display:flex;gap:8px}
+.search-input-wrap{flex:1;position:relative}
+.search-icon-i{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:13px;pointer-events:none}
+.search-input{
+  width:100%;background:var(--bg);border:1.5px solid var(--border);
+  border-radius:10px;padding:10px 12px 10px 36px;
+  font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;color:var(--text);outline:none;
+  transition:border-color .2s,box-shadow .2s
+}
+.search-input::placeholder{color:var(--muted)}
+.search-input:focus{border-color:var(--green);box-shadow:0 0 0 3px rgba(29,122,62,.08)}
+.search-btn{
+  background:var(--green);border:none;border-radius:10px;width:40px;
+  display:flex;align-items:center;justify-content:center;
+  color:#fff;font-size:13px;cursor:pointer;transition:all .2s;flex-shrink:0
+}
+.search-btn:hover{background:var(--green-l);box-shadow:0 4px 12px rgba(29,122,62,.3)}
+.filter-row{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap}
+.filter-pill{
+  padding:5px 12px;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;
+  border:1.5px solid var(--border);transition:all .2s;color:var(--muted);
+  background:var(--surface);font-family:'DM Mono',monospace
+}
+.fp-all{background:var(--green-xxl);color:var(--green);border-color:rgba(29,122,62,.25)!important;font-weight:700}
+.fp-a{background:var(--zone-a-l);color:var(--zone-a);border-color:rgba(37,99,235,.25)!important}
+.fp-b{background:var(--zone-b-l);color:var(--zone-b);border-color:rgba(124,58,237,.25)!important}
+.fp-c{background:var(--zone-c-l);color:var(--zone-c);border-color:rgba(180,83,9,.25)!important}
+.filter-pill:hover{border-color:var(--border2)!important;background:var(--bg)}
+
+.results-area{flex:1;overflow-y:auto;padding:12px 12px 80px}
+.results-meta{display:flex;justify-content:space-between;align-items:center;padding:6px 2px 10px}
+.results-meta-label{font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted)}
+.results-count{
+  font-family:'DM Mono',monospace;font-size:11px;font-weight:700;
+  color:var(--green);background:var(--green-xxl);
+  border:1px solid rgba(29,122,62,.2);padding:2px 10px;border-radius:20px
+}
+
+/* ── GRAVE CARD ── */
+.grave-card{
+  background:var(--surface);border:1.5px solid var(--border);
+  border-radius:var(--r);padding:14px;margin-bottom:8px;cursor:pointer;
+  transition:all .2s;position:relative;overflow:hidden;
+  box-shadow:0 1px 3px rgba(0,0,0,.04)
+}
+.grave-card::before{
+  content:'';position:absolute;left:0;top:0;bottom:0;width:3px;
+  border-radius:3px 0 0 3px
+}
+.grave-card.zon-A::before{background:var(--zone-a)}
+.grave-card.zon-B::before{background:var(--zone-b)}
+.grave-card.zon-C::before{background:var(--zone-c)}
+.grave-card:hover{border-color:var(--border2);background:var(--panel);box-shadow:var(--shadow)}
+.grave-card.active{border-color:var(--green);background:var(--green-xxl);box-shadow:0 0 0 3px rgba(29,122,62,.06)}
+.gc-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px}
+.gc-zone-badge{
+  font-family:'DM Mono',monospace;font-size:9px;font-weight:700;
+  padding:3px 8px;border-radius:5px;letter-spacing:.8px;text-transform:uppercase
+}
+.badge-a{background:var(--zone-a-l);color:var(--zone-a)}
+.badge-b{background:var(--zone-b-l);color:var(--zone-b)}
+.badge-c{background:var(--zone-c-l);color:var(--zone-c)}
+.gc-lot{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted)}
+.gc-name{font-size:14px;font-weight:700;color:var(--text);margin-bottom:3px;line-height:1.3}
+.gc-meta{font-size:11px;color:var(--muted);line-height:1.6;font-family:'DM Mono',monospace}
+.gc-coord{font-family:'DM Mono',monospace;font-size:9px;color:var(--green);margin-top:4px;opacity:.8}
+.gc-nav-btn{
+  width:100%;margin-top:10px;padding:9px 12px;
+  background:var(--green-xxl);border:1.5px solid rgba(29,122,62,.22);
+  border-radius:9px;font-size:12px;font-weight:700;color:var(--green);cursor:pointer;
+  font-family:'Plus Jakarta Sans',sans-serif;
+  display:flex;align-items:center;justify-content:center;gap:7px;transition:all .2s
+}
+.gc-nav-btn:hover{background:var(--green);color:#fff;border-color:var(--green);box-shadow:0 4px 12px rgba(29,122,62,.3)}
+
+.empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:50px 20px;color:var(--muted);text-align:center;gap:10px}
+.empty-icon{font-size:34px;opacity:.35}
+.empty-text{font-size:12.5px;line-height:1.6;color:var(--muted)}
+
+/* ── LOADING STATE ── */
+.loading-state{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 20px;gap:12px}
+.spinner{width:28px;height:28px;border:3px solid var(--border);border-top-color:var(--green);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-text{font-size:12px;color:var(--muted)}
+
+/* ── MAP AREA ── */
+.map-area{position:relative;overflow:hidden}
+#map{width:100%;height:100%;background:#e8ede8}
+
+/* ── COMPASS ── */
+.compass{position:absolute;top:16px;right:16px;width:76px;height:76px;z-index:1000;filter:drop-shadow(0 3px 12px rgba(0,0,0,.18))}
+
+/* ── COORD BAR ── */
+.coord-bar{
+  position:absolute;bottom:16px;left:16px;
+  background:rgba(255,255,255,.95);border:1px solid var(--border2);
+  backdrop-filter:blur(10px);color:var(--green);
+  font-family:'DM Mono',monospace;font-size:10px;
+  padding:7px 14px;border-radius:8px;z-index:1000;
+  box-shadow:var(--shadow)
+}
+
+/* ── LEGEND ── */
+.legend{
+  position:absolute;bottom:16px;right:16px;
+  background:rgba(255,255,255,.97);border:1px solid var(--border);
+  backdrop-filter:blur(10px);border-radius:var(--r);
+  padding:14px;z-index:1000;min-width:148px;box-shadow:var(--shadow-md)
+}
+.legend-ttl{font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
+.legend-item{display:flex;align-items:center;gap:8px;font-size:11px;font-weight:600;color:var(--text2);margin-bottom:6px}
+.ld{width:12px;height:12px;border-radius:3px;flex-shrink:0}
+.legend-sep{height:1px;background:var(--border);margin:8px 0}
+
+/* ── NAV PANEL ── */
+.nav-panel{
+  position:absolute;bottom:0;left:0;right:0;
+  background:var(--surface);border-top:1.5px solid var(--border);
+  z-index:2000;transform:translateY(100%);
+  transition:transform .45s cubic-bezier(.22,.68,0,1.2);
+  display:flex;flex-direction:column;max-height:68%
+}
+.nav-panel.open{transform:translateY(0)}
+.nav-header{display:flex;align-items:center;gap:12px;padding:14px 18px 12px;border-bottom:1px solid var(--border);flex-shrink:0}
+.nav-header-icon{width:40px;height:40px;border-radius:10px;background:var(--green-xxl);border:1px solid rgba(29,122,62,.2);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.nav-title-wrap{flex:1}
+.nav-title-label{font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--green);margin-bottom:1px}
+.nav-title-name{font-size:14px;font-weight:800;color:var(--text);line-height:1.2}
+.nav-close-btn{width:32px;height:32px;border-radius:8px;background:var(--bg);border:1px solid var(--border);color:var(--muted);font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s}
+.nav-close-btn:hover{background:var(--border);color:var(--text)}
+.nav-stats-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1px;background:var(--border);flex-shrink:0}
+.nav-stat-cell{background:var(--panel);padding:10px 14px;display:flex;flex-direction:column;gap:2px}
+.nav-stat-cell strong{font-family:'DM Mono',monospace;font-size:16px;font-weight:700;color:var(--green)}
+.nav-stat-cell span{font-size:9px;text-transform:uppercase;letter-spacing:1.2px;color:var(--muted)}
+.nav-steps-wrap{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:6px}
+.nav-step{display:flex;align-items:flex-start;gap:11px;padding:10px 12px;background:var(--panel);border:1.5px solid var(--border);border-radius:10px;opacity:0;animation:slideIn .3s forwards}
+.nav-step:nth-child(1){animation-delay:.05s}
+.nav-step:nth-child(2){animation-delay:.1s}
+.nav-step:nth-child(3){animation-delay:.15s}
+.nav-step:nth-child(4){animation-delay:.2s}
+.nav-step:nth-child(5){animation-delay:.25s}
+.nav-step.step-active{border-color:var(--green);background:var(--green-xxl)}
+@keyframes slideIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.step-num{width:28px;height:28px;border-radius:8px;background:var(--green-xxl);border:1px solid rgba(29,122,62,.2);font-family:'DM Mono',monospace;font-size:11px;font-weight:700;color:var(--green);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.step-num.dest{background:var(--gold-l);border-color:rgba(176,128,48,.3);color:var(--gold)}
+.step-body{flex:1}
+.step-action{font-size:13px;font-weight:700;color:var(--text);margin-bottom:2px}
+.step-detail{font-size:10px;color:var(--muted);font-family:'DM Mono',monospace}
+.step-dist{font-family:'DM Mono',monospace;font-size:11px;font-weight:700;color:var(--muted);flex-shrink:0}
+.nav-footer{padding:12px;border-top:1px solid var(--border);display:flex;gap:8px;flex-shrink:0}
+.nav-gmap-btn{flex:1;padding:11px;background:#1a56db;border:none;border-radius:10px;font-size:13px;font-weight:700;color:#fff;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;display:flex;align-items:center;justify-content:center;gap:8px;text-decoration:none;transition:all .2s}
+.nav-gmap-btn:hover{background:#1e40af}
+.nav-waze-btn{padding:11px 16px;background:var(--bg);border:1.5px solid var(--border2);border-radius:10px;font-size:13px;font-weight:700;color:var(--muted);cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;display:flex;align-items:center;justify-content:center;gap:8px;text-decoration:none;transition:all .2s}
+.nav-waze-btn:hover{border-color:var(--green);color:var(--green)}
+
+/* ── LEAFLET OVERRIDES ── */
+.leaflet-popup-content-wrapper{background:var(--surface)!important;border:1.5px solid var(--border)!important;border-radius:var(--r-lg)!important;padding:0!important;overflow:hidden!important;box-shadow:var(--shadow-md)!important}
+.leaflet-popup-tip{background:var(--surface)!important}
+.leaflet-popup-content{margin:0!important}
+.leaflet-popup-close-button{color:var(--muted)!important;top:10px!important;right:10px!important;font-size:18px!important}
+.leaflet-control-zoom a{background:var(--surface)!important;border-color:var(--border)!important;color:var(--text)!important;box-shadow:var(--shadow)!important}
+.leaflet-control-zoom a:hover{background:var(--panel)!important;color:var(--green)!important}
+
+@keyframes pulsate{
+  0%{box-shadow:0 0 0 0 rgba(29,122,62,.4),0 2px 10px rgba(0,0,0,.15)}
+  70%{box-shadow:0 0 0 10px rgba(29,122,62,0),0 2px 10px rgba(0,0,0,.15)}
+  100%{box-shadow:0 0 0 0 rgba(29,122,62,0),0 2px 10px rgba(0,0,0,.15)}
+}
+.pulse-marker{width:22px;height:22px;background:var(--green);border:3px solid #fff;border-radius:50%;animation:pulsate 1.6s ease-out infinite;box-shadow:0 2px 10px rgba(29,122,62,.4)}
+
+/* Popup */
+.popup-wrap{font-family:'Plus Jakarta Sans',sans-serif;width:260px;color:var(--text)}
+.popup-header{padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px}
+.popup-lot-icon{width:40px;height:40px;border-radius:10px;background:var(--green-xxl);border:1px solid rgba(29,122,62,.2);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.popup-lot-id{font-family:'DM Mono',monospace;font-size:9px;color:var(--green);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:1px}
+.popup-name{font-size:13px;font-weight:700;color:var(--text);line-height:1.2}
+.popup-body{padding:12px 14px}
+.popup-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:10px}
+.popup-field{background:var(--bg);border-radius:7px;padding:7px 9px}
+.popup-field-label{font-size:8px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:2px;font-family:'DM Mono',monospace}
+.popup-field-value{font-size:11px;font-weight:600;font-family:'DM Mono',monospace;color:var(--text2)}
+.popup-gps{background:var(--green-xxl);border:1px solid rgba(29,122,62,.15);border-radius:7px;padding:7px 9px;margin-bottom:10px}
+.popup-gps-label{font-size:8px;color:var(--green);text-transform:uppercase;letter-spacing:.8px;margin-bottom:2px;font-family:'DM Mono',monospace}
+.popup-gps-val{font-size:10px;font-weight:700;font-family:'DM Mono',monospace;color:var(--green)}
+.popup-nav-btn{width:100%;padding:10px;background:var(--green);border:none;border-radius:9px;font-size:12px;font-weight:700;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;font-family:'Plus Jakarta Sans',sans-serif;transition:all .2s}
+.popup-nav-btn:hover{background:var(--green-l)}
+
+/* ── DB STATUS BADGE ── */
+.db-badge{
+  display:flex;align-items:center;gap:5px;font-size:10px;
+  font-family:'DM Mono',monospace;color:var(--muted);margin-left:12px;
+  padding:4px 10px;border-radius:20px;border:1px solid var(--border);background:var(--bg)
+}
+.db-badge.ok{color:#16a34a;border-color:rgba(22,163,74,.2);background:#f0fdf4}
+.db-badge.err{color:var(--red);border-color:rgba(220,38,38,.2);background:var(--red-l)}
+.db-dot{width:6px;height:6px;border-radius:50%;background:currentColor}
+</style>
+</head>
+<body>
+
+<header>
+  <a href="#" class="hdr-brand">
+    <div class="hdr-icon">🕌</div>
+    <div class="hdr-name">Smart<em>Grave</em></div>
+  </a>
+  <div class="hdr-divider"></div>
+  <div class="hdr-tag">📍 Masjid Kariah Bangi</div>
+  <div class="hdr-spacer"></div>
+  <div class="db-badge" id="dbBadge"><div class="db-dot"></div><span>Menghubung DB...</span></div>
+  <div class="hdr-status" style="margin-left:14px"><div class="hdr-dot"></div>Sistem Aktif</div>
+  <div class="hdr-stats">
+    <div class="hdr-stat"><strong id="statTotal">—</strong>Jumlah Lot</div>
+    <div class="hdr-stat"><strong id="statTersedia" style="color:var(--green)">—</strong>Tersedia</div>
+    <div class="hdr-stat"><strong id="statTerisi" style="color:var(--red)">—</strong>Terisi</div>
+  </div>
+</header>
+
+<div class="layout">
+  <div class="sidebar">
+    <div class="search-block">
+      <div class="search-label">Carian Pusara</div>
+      <div class="search-row">
+        <div class="search-input-wrap">
+          <i class="fas fa-search search-icon-i"></i>
+          <input type="text" id="searchInput" class="search-input" placeholder="Nama si mati / No. IC...">
+        </div>
+        <button class="search-btn" onclick="doSearch()"><i class="fas fa-arrow-right"></i></button>
+      </div>
+      <div class="filter-row">
+        <button class="filter-pill fp-all" id="pill-all" onclick="filterZone('all')">Semua</button>
+        <button class="filter-pill" id="pill-A" onclick="filterZone('A')">Zon A</button>
+        <button class="filter-pill" id="pill-B" onclick="filterZone('B')">Zon B</button>
+        <button class="filter-pill" id="pill-C" onclick="filterZone('C')">Zon C</button>
+      </div>
+    </div>
+    <div class="results-area">
+      <div class="results-meta">
+        <span class="results-meta-label">Rekod Ditemui</span>
+        <span class="results-count" id="resCount">0</span>
+      </div>
+      <div id="resList">
+        <div class="loading-state">
+          <div class="spinner"></div>
+          <div class="loading-text">Memuatkan data dari pangkalan data...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="map-area" id="mapArea">
+    <div id="map"></div>
+
+    <svg class="compass" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="50" cy="50" r="48" fill="rgba(255,255,255,.96)" stroke="#e4ebe4" stroke-width="1.5"/>
+      <circle cx="50" cy="50" r="38" fill="none" stroke="#e4ebe4" stroke-width=".8"/>
+      <polygon points="50,16 53.5,50 50,45 46.5,50" fill="#dc2626"/>
+      <polygon points="50,84 53.5,50 50,55 46.5,50" fill="#9ca3af"/>
+      <circle cx="50" cy="50" r="5" fill="white" stroke="#e4ebe4" stroke-width="1"/>
+      <circle cx="50" cy="50" r="2.5" fill="#1d7a3e"/>
+      <text x="50" y="11" text-anchor="middle" font-size="9" font-weight="800" fill="#dc2626" font-family="DM Mono,monospace">U</text>
+      <text x="50" y="96" text-anchor="middle" font-size="9" font-weight="800" fill="#9ca3af" font-family="DM Mono,monospace">S</text>
+      <text x="96" y="54" text-anchor="middle" font-size="9" font-weight="800" fill="#9ca3af" font-family="DM Mono,monospace">T</text>
+      <text x="4" y="54" text-anchor="middle" font-size="9" font-weight="800" fill="#9ca3af" font-family="DM Mono,monospace">B</text>
+    </svg>
+
+    <div class="coord-bar" id="coordBar">📡 Gerakkan tetikus pada peta...</div>
+
+    <div class="legend">
+      <div class="legend-ttl">Petunjuk Peta</div>
+      <div class="legend-item"><div class="ld" style="background:rgba(37,99,235,.15);border:1.5px solid #2563eb"></div>Zon A</div>
+      <div class="legend-item"><div class="ld" style="background:rgba(124,58,237,.15);border:1.5px solid #7c3aed"></div>Zon B</div>
+      <div class="legend-item"><div class="ld" style="background:rgba(180,83,9,.15);border:1.5px solid #b45309"></div>Zon C</div>
+      <div class="legend-sep"></div>
+      <div class="legend-item"><div class="ld" style="background:#f0f4f0;border:1.5px solid #9ca3af"></div>Lot Kosong</div>
+      <div class="legend-item"><div class="ld" style="background:#fde8e8;border:1.5px solid #dc2626"></div>Lot Terisi</div>
+      <div class="legend-item"><div class="ld" style="background:#e8f5ec;border:1.5px solid #1d7a3e;border-radius:50%"></div>Carian Aktif</div>
+    </div>
+
+    <!-- NAV PANEL -->
+    <div class="nav-panel" id="navPanel">
+      <div class="nav-header">
+        <div class="nav-header-icon">🧭</div>
+        <div class="nav-title-wrap">
+          <div class="nav-title-label">Navigasi ke Pusara</div>
+          <div class="nav-title-name" id="navTitleName">—</div>
+        </div>
+        <button class="nav-close-btn" onclick="closeNav()"><i class="fas fa-xmark"></i></button>
+      </div>
+      <div class="nav-stats-row">
+        <div class="nav-stat-cell"><strong id="navDist">—</strong><span>Jarak</span></div>
+        <div class="nav-stat-cell"><strong id="navTime">—</strong><span>Masa Berjalan</span></div>
+        <div class="nav-stat-cell"><strong id="navLot">—</strong><span>Lot No.</span></div>
+      </div>
+      <div class="nav-steps-wrap" id="navStepsWrap"></div>
+      <div class="nav-footer">
+        <a id="navGmap" href="#" target="_blank" class="nav-gmap-btn"><i class="fab fa-google"></i> Google Maps</a>
+        <a id="navWaze" href="#" target="_blank" class="nav-waze-btn"><i class="fas fa-diamond-turn-right"></i> Waze</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════════════
+//  CONFIG — tukar API_BASE ikut lokasi fail PHP anda
+// ══════════════════════════════════════════════════════════════
+const API_BASE = 'api/graves.php';
+
+// ── Masjid Kariah Bangi koordinat sebenar ──
+// Tanah perkuburan sebelah Masjid Kariah Sg Ramal Bangi
+const MAP_CENTER   = [2.9742, 101.7796];
+const ENTRY_POINT  = [2.97445, 101.77965]; // Pintu pagar kubur
+
+// ══════════════════════════════════════════════════════════════
+//  MAP INIT
+// ══════════════════════════════════════════════════════════════
+const map = L.map('map', {
+  center: MAP_CENTER,
+  zoom: 19,
+  zoomControl: false,
+  attributionControl: false
+});
+
+// Satellite hybrid tile — lebih realistik untuk kawasan kubur
+L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+  maxZoom: 22, maxNativeZoom: 20
+}).addTo(map);
+
+// Label overlay
+L.tileLayer('https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png', {
+  maxZoom: 22, maxNativeZoom: 19, opacity: 0.7
+}).addTo(map);
+
+L.control.zoom({ position: 'topright' }).addTo(map);
+map.on('mousemove', e => {
+  document.getElementById('coordBar').textContent =
+    `📡 ${e.latlng.lat.toFixed(7)}, ${e.latlng.lng.toFixed(7)}`;
+});
+
+// ══════════════════════════════════════════════════════════════
+//  ZONE CONFIG — layout tilted/diagonal macam gambar
+//  Ikut rekod gambar: lot bersusun diagonal, 170+ lot
+// ══════════════════════════════════════════════════════════════
+const ZONE_CFG = {
+  A: {
+    // Origin kiri atas
+    originLat: 2.97468, originLng: 101.77950,
+    rows: 10, cols: 8,
+    // Vektor row (ke bawah-kanan sikit) — ini buat effect diagonal
+    rowDLat: -0.000120, rowDLng:  0.000035,
+    // Vektor col (ke kanan-bawah sikit)
+    colDLat: -0.000028, colDLng:  0.000095,
+    color: '#2563eb', fill: 'rgba(37,99,235,.08)',
+    label: 'ZON A'
+  },
+  B: {
+    originLat: 2.97455, originLng: 101.78038,
+    rows: 10, cols: 7,
+    rowDLat: -0.000120, rowDLng:  0.000035,
+    colDLat: -0.000028, colDLng:  0.000095,
+    color: '#7c3aed', fill: 'rgba(124,58,237,.08)',
+    label: 'ZON B'
+  },
+  C: {
+    originLat: 2.97440, originLng: 101.78118,
+    rows: 8, cols: 6,
+    rowDLat: -0.000120, rowDLng:  0.000035,
+    colDLat: -0.000028, colDLng:  0.000095,
+    color: '#b45309', fill: 'rgba(180,83,9,.08)',
+    label: 'ZON C'
+  }
+};
+
+// ── Global state ──
+let _allGraves   = [];   // dari DB
+let _lotMap      = {};   // no_lot → grave data (includes lat/lng setelah drawAll)
+let _lotLayers   = {};   // no_lot → leaflet layer
+let _marker      = null;
+let _navLine     = null;
+let _arrowMarker = null;
+let _activeZone  = 'all';
+
+// ══════════════════════════════════════════════════════════════
+//  DRAW LOTS — tilted grid dengan parallelogram shape
+// ══════════════════════════════════════════════════════════════
+function drawAll() {
+  Object.entries(ZONE_CFG).forEach(([zon, cfg]) => {
+    // Kira sempadan zon untuk warna background
+    const corners = [
+      [cfg.originLat, cfg.originLng],
+      [cfg.originLat + cfg.cols * cfg.colDLat, cfg.originLng + cfg.cols * cfg.colDLng],
+      [cfg.originLat + cfg.rows * cfg.rowDLat + cfg.cols * cfg.colDLat,
+       cfg.originLng + cfg.rows * cfg.rowDLng + cfg.cols * cfg.colDLng],
+      [cfg.originLat + cfg.rows * cfg.rowDLat, cfg.originLng + cfg.rows * cfg.rowDLng],
+    ];
+    L.polygon(corners, {
+      color: cfg.color, weight: 2, opacity: .5,
+      fillColor: cfg.fill, fillOpacity: 1
+    }).addTo(map);
+
+    // Label zon
+    const midLat = cfg.originLat + (cfg.rows / 2) * cfg.rowDLat + (cfg.cols / 2) * cfg.colDLat;
+    const midLng = cfg.originLng + (cfg.rows / 2) * cfg.rowDLng + (cfg.cols / 2) * cfg.colDLng;
+    L.marker([midLat - 0.00045, midLng], {
+      icon: L.divIcon({
+        html: `<div style="background:rgba(255,255,255,.92);color:${cfg.color};font-size:10px;font-weight:800;padding:3px 11px;border-radius:6px;font-family:'DM Mono',monospace;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.15);border:1.5px solid ${cfg.color}40">${cfg.label}</div>`,
+        className: '', iconAnchor: [30, 0]
+      })
+    }).addTo(map);
+
+    // Lukis setiap lot sebagai parallelogram (4 corner)
+    for (let r = 0; r < cfg.rows; r++) {
+      for (let c = 0; c < cfg.cols; c++) {
+        // 4 sudut lot — create tilted rectangle
+        const baseLat = cfg.originLat + r * cfg.rowDLat + c * cfg.colDLat;
+        const baseLng = cfg.originLng + r * cfg.rowDLng + c * cfg.colDLng;
+
+        const lotCorners = [
+          [baseLat,                          baseLng],
+          [baseLat + cfg.colDLat,            baseLng + cfg.colDLng],
+          [baseLat + cfg.rowDLat + cfg.colDLat, baseLng + cfg.rowDLng + cfg.colDLng],
+          [baseLat + cfg.rowDLat,            baseLng + cfg.rowDLng],
+        ];
+
+        // Centre lot
+        const cLat = lotCorners.reduce((s, p) => s + p[0], 0) / 4;
+        const cLng = lotCorners.reduce((s, p) => s + p[1], 0) / 4;
+
+        // Lot ID — format ikut gambar: "PZO-001" ... atau A-01
+        const lotNum  = r * cfg.cols + c + 1;
+        const lotId   = `${zon}-${String(lotNum).padStart(2, '0')}`;
+
+        // Check ada data dari DB?
+        const grave   = _allGraves.find(d => d.no_lot === lotId);
+        const occupied = !!grave;
+
+        // Simpan koordinat ke dalam grave object
+        if (grave) {
+          grave._lat = cLat;
+          grave._lng = cLng;
+        }
+
+        // Simpan ke lotMap supaya boleh lookup nanti
+        _lotMap[lotId] = {
+          lotId, lat: cLat, lng: cLng, zon,
+          grave: grave || null
+        };
+
+        // Warna lot
+        const fillColor = occupied ? '#fde8e8' : '#f5f7f4';
+        const strokeColor = occupied ? '#dc2626' : '#94a3a0';
+        const strokeWeight = occupied ? 1.5 : 0.8;
+
+        const poly = L.polygon(lotCorners, {
+          color: strokeColor,
+          weight: strokeWeight,
+          fillColor,
+          fillOpacity: 0.92
+        }).addTo(map);
+
+        _lotLayers[lotId] = poly;
+
+        if (occupied) {
+          poly.on('click', () => focusGrave(lotId));
+          poly.on('mouseover', () => {
+            poly.setStyle({ fillColor: '#fecaca', weight: 2 });
+          });
+          poly.on('mouseout', () => {
+            poly.setStyle({ fillColor: '#fde8e8', weight: 1.5 });
+          });
+        }
+
+        // Label lot — saiz kecil macam dalam gambar
+        L.marker([cLat, cLng], {
+          icon: L.divIcon({
+            html: `<div style="font-size:6px;font-weight:700;color:${occupied ? '#b91c1c' : '#6b7a6b'};font-family:'DM Mono',monospace;white-space:nowrap;pointer-events:none;text-align:center;line-height:1;transform:rotate(-15deg)">${lotId}</div>`,
+            className: '', iconAnchor: [10, 4]
+          })
+        }).addTo(map);
+      }
+    }
+  });
+}
+
+// ══════════════════════════════════════════════════════════════
+//  LANDMARKS REALISTIK — Masjid Kariah Bangi
+// ══════════════════════════════════════════════════════════════
+function drawLandmarks() {
+  // ── Jalan masuk utama (path) ──
+  L.polyline([
+    [2.97500, 101.77955],
+    [2.97480, 101.77958],
+    [2.97470, 101.77962],
+  ], { color: '#c2914a', weight: 8, opacity: .35, lineCap: 'round' }).addTo(map);
+
+  L.marker([2.97484, 101.77954], {
+    icon: L.divIcon({
+      html: `<div style="background:rgba(255,255,255,.92);color:#92400e;font-size:8px;font-weight:700;padding:2px 7px;border-radius:5px;border:1px solid #d97706;white-space:nowrap;font-family:'DM Mono',monospace;box-shadow:0 1px 4px rgba(0,0,0,.12)">Laluan Utama</div>`,
+      className: '', iconAnchor: [38, 6]
+    })
+  }).addTo(map);
+
+  // ── Landmarks ──
+  const landmarks = [
+    // Pintu masuk — dengan ikon realistik
+    { lat: 2.97500, lng: 101.77962, icon: '🚪', label: 'Pintu Masuk Utama', size: 24 },
+    { lat: 2.97495, lng: 101.78000, icon: '🚪', label: 'Pintu Masuk Sampingan', size: 20 },
+
+    // Tempat letak kereta
+    { lat: 2.97515, lng: 101.77975, icon: '🅿️', label: 'Kawasan Parking', size: 22 },
+
+    // Masjid / Surau
+    { lat: 2.97525, lng: 101.77940, icon: '🕌', label: 'Masjid Kariah Sg Ramal', size: 28 },
+
+    // Pokok dalam kawasan kubur — taburan realistik
+    { lat: 2.97490, lng: 101.77985, icon: '🌳', label: 'Pokok Ara', size: 22 },
+    { lat: 2.97465, lng: 101.78020, icon: '🌳', label: 'Pokok Meranti', size: 20 },
+    { lat: 2.97435, lng: 101.78005, icon: '🌲', label: 'Pokok Kelapa', size: 22 },
+    { lat: 2.97450, lng: 101.78055, icon: '🌳', label: 'Pokok Besar', size: 20 },
+    { lat: 2.97418, lng: 101.78090, icon: '🌴', label: 'Pokok Palma', size: 20 },
+    { lat: 2.97430, lng: 101.78130, icon: '🌳', label: 'Pokok Redup', size: 22 },
+    { lat: 2.97410, lng: 101.78115, icon: '🌲', label: 'Pokok Cemara', size: 20 },
+    { lat: 2.97475, lng: 101.78008, icon: '🌿', label: 'Pokok Kecil', size: 18 },
+    { lat: 2.97445, lng: 101.78070, icon: '🌿', label: 'Semak Renek', size: 16 },
+
+    // Kemudahan
+    { lat: 2.97508, lng: 101.77988, icon: '💧', label: 'Tempat Wudhuk & Paip Air', size: 22 },
+    { lat: 2.97502, lng: 101.78010, icon: '🚽', label: 'Tandas Awam', size: 20 },
+
+    // Pejabat
+    { lat: 2.97518, lng: 101.77950, icon: '🏠', label: 'Pondok Jaga', size: 22 },
+  ];
+
+  landmarks.forEach(lm => {
+    L.marker([lm.lat, lm.lng], {
+      icon: L.divIcon({
+        html: `<div style="font-size:${lm.size}px;filter:drop-shadow(0 2px 4px rgba(0,0,0,.3));cursor:default;line-height:1">${lm.icon}</div>`,
+        className: '', iconAnchor: [lm.size / 2, lm.size]
+      })
+    })
+    .bindTooltip(`<b style="font-family:'Plus Jakarta Sans',sans-serif;font-size:12px">${lm.label}</b>`, {
+      direction: 'top', offset: [0, -lm.size - 2], opacity: .97
+    })
+    .addTo(map);
+  });
+
+  // ── Pagar kawasan kubur ──
+  L.rectangle(
+    [[2.97406, 101.77938], [2.97510, 101.78148]],
+    { color: '#5a7a5a', weight: 2.5, fill: false, dashArray: '6,4', opacity: .5 }
+  ).addTo(map);
+}
+
+// ══════════════════════════════════════════════════════════════
+//  POPUP
+// ══════════════════════════════════════════════════════════════
+function makePopup(lotId) {
+  const info = _lotMap[lotId];
+  if (!info || !info.grave) return '';
+  const d = info.grave;
+  const zon = info.zon;
+  const zcHex  = zon === 'A' ? '#2563eb' : zon === 'B' ? '#7c3aed' : '#b45309';
+  const zcLHex = zon === 'A' ? '#eff6ff' : zon === 'B' ? '#f5f3ff' : '#fffbeb';
+  const tarikh = d.tarikh_wafat ? new Date(d.tarikh_wafat).toLocaleDateString('ms-MY') : '—';
+
+  return `<div class="popup-wrap">
+  <div class="popup-header" style="background:${zcLHex};border-bottom:1px solid ${zcHex}20">
+    <div class="popup-lot-icon" style="background:${zcLHex};border-color:${zcHex}30">🪦</div>
+    <div>
+      <div class="popup-lot-id" style="color:${zcHex}">Lot ${lotId}</div>
+      <div class="popup-name">${d.nama_jenazah || '—'}</div>
+    </div>
+  </div>
+  <div class="popup-body">
+    <div class="popup-grid">
+      <div class="popup-field">
+        <div class="popup-field-label">No. IC</div>
+        <div class="popup-field-value">${d.no_ic || '—'}</div>
+      </div>
+      <div class="popup-field">
+        <div class="popup-field-label">Tarikh Wafat</div>
+        <div class="popup-field-value">${tarikh}</div>
+      </div>
+      <div class="popup-field">
+        <div class="popup-field-label">Jantina</div>
+        <div class="popup-field-value">${d.jantina || '—'}</div>
+      </div>
+      <div class="popup-field">
+        <div class="popup-field-label">Status Lot</div>
+        <div class="popup-field-value" style="color:#dc2626">Terisi</div>
+      </div>
+    </div>
+    <div class="popup-gps">
+      <div class="popup-gps-label">📡 Koordinat GPS</div>
+      <div class="popup-gps-val">${info.lat.toFixed(7)}, ${info.lng.toFixed(7)}</div>
+    </div>
+    <button onclick="startNav('${lotId}')" class="popup-nav-btn">🧭 Navigasi ke Pusara Ini</button>
+  </div>
+</div>`;
+}
+
+// ══════════════════════════════════════════════════════════════
+//  FOCUS GRAVE
+// ══════════════════════════════════════════════════════════════
+function focusGrave(lotId) {
+  const info = _lotMap[lotId];
+  if (!info) return;
+
+  if (_marker) map.removeLayer(_marker);
+  map.flyTo([info.lat, info.lng], 21, { duration: 1.4, easeLinearity: .3 });
+
+  _marker = L.marker([info.lat, info.lng], {
+    icon: L.divIcon({ html: `<div class="pulse-marker"></div>`, className: '', iconAnchor: [11, 11] })
+  }).addTo(map).bindPopup(makePopup(lotId), { maxWidth: 280 }).openPopup();
+
+  // Highlight lot
+  if (_lotLayers[lotId]) {
+    _lotLayers[lotId].setStyle({ color: '#1d7a3e', weight: 2.5, fillColor: '#dcfce7' });
+    setTimeout(() => {
+      if (_lotLayers[lotId]) _lotLayers[lotId].setStyle({ color: '#dc2626', weight: 1.5, fillColor: '#fde8e8' });
+    }, 3000);
+  }
+
+  // Sidebar card
+  document.querySelectorAll('.grave-card').forEach(c => c.classList.remove('active'));
+  const card = document.getElementById(`gc-${lotId}`);
+  if (card) { card.classList.add('active'); card.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
+}
+
+// ══════════════════════════════════════════════════════════════
+//  NAVIGATION
+// ══════════════════════════════════════════════════════════════
+function bearing(from, to) {
+  const dL = (to[1] - from[1]) * Math.PI / 180;
+  const la1 = from[0] * Math.PI / 180, la2 = to[0] * Math.PI / 180;
+  const y = Math.sin(dL) * Math.cos(la2);
+  const x = Math.cos(la1) * Math.sin(la2) - Math.sin(la1) * Math.cos(la2) * Math.cos(dL);
+  return ((Math.atan2(y, x) * 180 / Math.PI) + 360) % 360;
+}
+
+function startNav(lotId) {
+  const info = _lotMap[lotId];
+  if (!info) return;
+
+  if (_navLine)     map.removeLayer(_navLine);
+  if (_arrowMarker) map.removeLayer(_arrowMarker);
+
+  _navLine = L.polyline([ENTRY_POINT, [info.lat, info.lng]], {
+    color: '#1d7a3e', weight: 4, opacity: .85, dashArray: '14,10', lineCap: 'round'
+  }).addTo(map);
+
+  const mid = [(ENTRY_POINT[0] + info.lat) / 2, (ENTRY_POINT[1] + info.lng) / 2];
+  const brg = bearing(ENTRY_POINT, [info.lat, info.lng]);
+  _arrowMarker = L.marker(mid, {
+    icon: L.divIcon({
+      html: `<div style="font-size:18px;transform:rotate(${brg}deg);filter:drop-shadow(0 1px 3px rgba(0,0,0,.3))">➤</div>`,
+      className: '', iconAnchor: [9, 9]
+    })
+  }).addTo(map);
+
+  map.fitBounds(_navLine.getBounds(), { padding: [80, 80] });
+
+  const dist = Math.round(map.distance(ENTRY_POINT, [info.lat, info.lng]));
+  const mins = Math.ceil(dist / 60);
+
+  const d = info.grave;
+  const zonLabel = info.zon;
+  const dLat = info.lat - ENTRY_POINT[0];
+  const dLng = info.lng - ENTRY_POINT[1];
+
+  const steps = [
+    { act: 'Masuk melalui Pintu Masuk Utama', detail: 'Pagar besi, sebelah pondok jaga', dist: '' },
+    { act: 'Ikut Laluan Utama ke hadapan', detail: 'Jalan lurus ~20 meter', dist: '~20 m' },
+  ];
+  if (Math.abs(dLng) > 0.00005) {
+    steps.push({ act: dLng > 0 ? '→ Belok Kanan' : '← Belok Kiri', detail: `Menuju ke arah Zon ${zonLabel}`, dist: `~${Math.round(Math.abs(dLng) * 111320)} m` });
+  }
+  if (Math.abs(dLat) > 0.00005) {
+    steps.push({ act: dLat > 0 ? '↑ Terus ke Utara' : '↓ Terus ke Selatan', detail: `Zon ${zonLabel} — barisan lot`, dist: `~${Math.round(Math.abs(dLat) * 110540)} m` });
+  }
+  steps.push({ act: `📍 Destinasi — Lot ${lotId}`, detail: d ? d.nama_jenazah : '—', dist: `${dist} m jumlah` });
+
+  document.getElementById('navTitleName').textContent = d ? d.nama_jenazah : lotId;
+  document.getElementById('navDist').textContent = `${dist} m`;
+  document.getElementById('navTime').textContent  = `~${mins} min`;
+  document.getElementById('navLot').textContent   = lotId;
+  document.getElementById('navGmap').href = `https://www.google.com/maps/dir/?api=1&destination=${info.lat},${info.lng}&travelmode=walking`;
+  document.getElementById('navWaze').href = `https://waze.com/ul?ll=${info.lat},${info.lng}&navigate=yes`;
+
+  document.getElementById('navStepsWrap').innerHTML = steps.map((s, i) => `
+    <div class="nav-step ${i === 0 ? 'step-active' : ''}">
+      <div class="step-num ${i === steps.length - 1 ? 'dest' : ''}">${i === steps.length - 1 ? '★' : (i + 1)}</div>
+      <div class="step-body">
+        <div class="step-action">${s.act}</div>
+        <div class="step-detail">${s.detail}</div>
+      </div>
+      ${s.dist ? `<div class="step-dist">${s.dist}</div>` : ''}
+    </div>`).join('');
+
+  document.getElementById('navPanel').classList.add('open');
+}
+
+function closeNav() {
+  document.getElementById('navPanel').classList.remove('open');
+  if (_navLine)     { map.removeLayer(_navLine);     _navLine = null; }
+  if (_arrowMarker) { map.removeLayer(_arrowMarker); _arrowMarker = null; }
+}
+
+// ══════════════════════════════════════════════════════════════
+//  FILTER & SEARCH
+// ══════════════════════════════════════════════════════════════
+function filterZone(z) {
+  _activeZone = z;
+  document.querySelectorAll('.filter-pill').forEach(p => { p.className = 'filter-pill'; });
+  const pill = document.getElementById(`pill-${z}`);
+  if (z === 'all') pill.classList.add('fp-all');
+  else if (z === 'A') pill.classList.add('fp-a');
+  else if (z === 'B') pill.classList.add('fp-b');
+  else pill.classList.add('fp-c');
+  renderSidebar(_allGraves);
+}
+
+function renderSidebar(graves) {
+  let results = graves.filter(d => d.nama_jenazah); // hanya lot yang ada jenazah
+  const kw = document.getElementById('searchInput').value.toLowerCase().trim();
+  if (kw) results = results.filter(d =>
+    (d.nama_jenazah || '').toLowerCase().includes(kw) ||
+    (d.no_ic || '').includes(kw)
+  );
+  if (_activeZone !== 'all') results = results.filter(d => d.no_lot.startsWith(_activeZone + '-'));
+
+  document.getElementById('resCount').textContent = results.length;
+  const list = document.getElementById('resList');
+
+  if (!results.length) {
+    list.innerHTML = `<div class="empty-state"><div class="empty-icon"><i class="fas fa-circle-xmark"></i></div><div class="empty-text">Tiada rekod ditemui.<br>Cuba keyword lain.</div></div>`;
+    return;
+  }
+
+  const bcls = z => z === 'A' ? 'badge-a' : z === 'B' ? 'badge-b' : 'badge-c';
+  const zon  = lot => lot.no_lot.charAt(0);
+
+  list.innerHTML = results.map(d => {
+    const z = zon(d);
+    const tarikh = d.tarikh_wafat ? new Date(d.tarikh_wafat).toLocaleDateString('ms-MY') : '—';
+    const info = _lotMap[d.no_lot];
+    const coordStr = info ? `📡 ${info.lat.toFixed(6)}, ${info.lng.toFixed(6)}` : '';
+    return `
+    <div class="grave-card zon-${z}" id="gc-${d.no_lot}" onclick="focusGrave('${d.no_lot}')">
+      <div class="gc-top">
+        <span class="gc-zone-badge ${bcls(z)}">ZON ${z}</span>
+        <span class="gc-lot">${d.no_lot}</span>
+      </div>
+      <div class="gc-name">${d.nama_jenazah}</div>
+      <div class="gc-meta">IC: ${d.no_ic || '—'} &nbsp;·&nbsp; ${tarikh}</div>
+      ${coordStr ? `<div class="gc-coord">${coordStr}</div>` : ''}
+      <button class="gc-nav-btn" onclick="event.stopPropagation();startNav('${d.no_lot}')">
+        <i class="fas fa-route"></i> Navigasi ke Pusara
+      </button>
+    </div>`;
+  }).join('');
+}
+
+function doSearch() {
+  renderSidebar(_allGraves);
+}
+
+// ══════════════════════════════════════════════════════════════
+//  DB — Load data dari API
+// ══════════════════════════════════════════════════════════════
+async function loadStats() {
+  try {
+    const r = await fetch(`${API_BASE}?action=stats`);
+    const j = await r.json();
+    if (j.success && j.data) {
+      document.getElementById('statTotal').textContent    = j.data.jumlah_lot    || '—';
+      document.getElementById('statTersedia').textContent = j.data.tersedia      || '—';
+      document.getElementById('statTerisi').textContent   = j.data.terisi        || '—';
+    }
+  } catch (e) { /* silent */ }
+}
+
+async function loadGraves() {
+  const badge = document.getElementById('dbBadge');
+  try {
+    const r = await fetch(`${API_BASE}?action=list`);
+    const j = await r.json();
+
+    if (j.success) {
+      _allGraves = j.data || [];
+      badge.className = 'db-badge ok';
+      badge.innerHTML = '<div class="db-dot"></div><span>DB Bersambung</span>';
+    } else {
+      throw new Error(j.message);
+    }
+  } catch (e) {
+    badge.className = 'db-badge err';
+    badge.innerHTML = '<div class="db-dot"></div><span>DB Gagal</span>';
+    console.warn('API error, guna data dummy:', e.message);
+    // ── Fallback: data dummy kalau API tak available ──
+    _allGraves = DUMMY_GRAVES;
+  }
+
+  // Draw semua lot (terisi atau kosong) — coordinates dikira dalam drawAll
+  drawAll();
+  drawLandmarks();
+  // Render sidebar — lot yang ada jenazah sahaja
+  renderSidebar(_allGraves);
+  // Auto focus lot pertama kalau ada
+  const firstOcc = _allGraves.find(d => d.nama_jenazah && _lotMap[d.no_lot]);
+  if (firstOcc) focusGrave(firstOcc.no_lot);
+}
+
+// ── Dummy data fallback (kalau DB belum ada data) ──
+const DUMMY_GRAVES = [
+  { no_lot:'A-01', nama_jenazah:'Ahmad Bin Kassim',         no_ic:'450101105567', jantina:'Lelaki',     tarikh_wafat:'2023-05-12', status_lot:'Penuh' },
+  { no_lot:'A-02', nama_jenazah:'Siti Rahimah Bt Wahab',    no_ic:'520312205544', jantina:'Perempuan',  tarikh_wafat:'2023-03-01', status_lot:'Penuh' },
+  { no_lot:'A-03', nama_jenazah:'Nur Aisyah Binti Zahrol',  no_ic:'011226105544', jantina:'Perempuan',  tarikh_wafat:'2023-12-26', status_lot:'Penuh' },
+  { no_lot:'A-05', nama_jenazah:'Abdullah Bin Omar',         no_ic:'381105105533', jantina:'Lelaki',     tarikh_wafat:'2022-11-05', status_lot:'Penuh' },
+  { no_lot:'A-07', nama_jenazah:'Zainab Bt Malik',           no_ic:'600923205577', jantina:'Perempuan',  tarikh_wafat:'2023-09-23', status_lot:'Penuh' },
+  { no_lot:'B-01', nama_jenazah:'Mohamad Aisyah Bin Bakri',  no_ic:'900515106677', jantina:'Lelaki',     tarikh_wafat:'2023-05-15', status_lot:'Penuh' },
+  { no_lot:'B-03', nama_jenazah:'Hamid Bin Saad',            no_ic:'560708105522', jantina:'Lelaki',     tarikh_wafat:'2022-07-08', status_lot:'Penuh' },
+  { no_lot:'B-04', nama_jenazah:'Rohani Bt Daud',            no_ic:'710212205566', jantina:'Perempuan',  tarikh_wafat:'2024-02-12', status_lot:'Penuh' },
+  { no_lot:'C-01', nama_jenazah:'Wan Fatimah Binti Yusof',   no_ic:'650630205511', jantina:'Perempuan',  tarikh_wafat:'2023-06-30', status_lot:'Penuh' },
+  { no_lot:'C-03', nama_jenazah:'Mariam Bt Abdul Razak',     no_ic:'480319205533', jantina:'Perempuan',  tarikh_wafat:'2022-03-19', status_lot:'Penuh' },
+];
+
+// ══════════════════════════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════════════════════════
+document.getElementById('searchInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') doSearch();
+});
+
+window.onload = () => {
+  loadStats();
+  loadGraves();
+};
+</script>
+</body>
+</html>
