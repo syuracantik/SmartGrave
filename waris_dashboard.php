@@ -82,17 +82,22 @@ try {
 
     // 2. Ambil tempahan terbaru — FK dah tukar dari id_waris → user_id
     //    dan id_jenazah → jenazah_id, id_tempahan → id
+    //    Filter out completed bookings (Lulus / Tolak) after 24 hours
     $stmt_app = $pdo->prepare("
         SELECT 
             t.id,
             t.status_proses,
             t.tarikh_mohon,
+            t.ulasan_admin,
             m.nama_jenazah,
             m.no_ic,
-            m.tarikh_wafat
+            m.tarikh_wafat,
+            lp.no_lot
         FROM tempahan t
         JOIN maklumat_jenazah m ON t.jenazah_id = m.id
+        LEFT JOIN lot_pusara lp ON lp.jenazah_id = m.id
         WHERE t.user_id = ?
+          AND NOT (t.status_proses IN ('Lulus', 'Tolak') AND t.updated_at < NOW() - INTERVAL '24 hours')
         ORDER BY t.tarikh_mohon DESC
         LIMIT 1
     ");
@@ -108,10 +113,24 @@ try {
 
         // Logik status ke kod nombor untuk stepper UI
         $status_text = strtolower(trim($app['status_proses']));
-        if ($status_text == 'menunggu bayaran')  $status_kod = 1;
-        elseif ($status_text == 'bayaran berjaya') $status_kod = 2;
-        elseif ($status_text == 'sedang diproses') $status_kod = 3;
-        elseif ($status_text == 'selesai')         $status_kod = 4;
+        if ($status_text == 'pending') {
+            $status_kod = 1;
+        } elseif ($status_text == 'bayaran berjaya') {
+            $status_kod = 2;
+        } elseif ($status_text == 'lulus') {
+            if (!empty($app['no_lot'])) {
+                $status_kod = 4;
+            } else {
+                $status_kod = 3;
+            }
+        } elseif ($status_text == 'tolak') {
+            $status_kod = -1;
+        } else {
+            // fallback
+            if ($status_text == 'menunggu bayaran') $status_kod = 1;
+            elseif ($status_text == 'selesai') $status_kod = 4;
+            else $status_kod = 1;
+        }
     } else {
         $permohonan_wujud = false;
         $id_permohonan    = "Tiada Rekod";
@@ -142,10 +161,10 @@ include 'sidebar.php';
             </div>
             
             <div class="relative group">
-                <button class="w-14 h-14 bg-white rounded-2xl shadow-sm border border-emerald-100 flex items-center justify-center text-emerald-800 font-bold text-xl border-b-4 border-b-emerald-700 hover:bg-emerald-50 transition-all cursor-pointer focus:outline-none">
+                <button class="profile-dropdown-btn w-14 h-14 bg-white rounded-2xl shadow-sm border border-emerald-100 flex items-center justify-center text-emerald-800 font-bold text-xl border-b-4 border-b-emerald-700 hover:bg-emerald-50 transition-all cursor-pointer focus:outline-none">
                     <?php echo $initial; ?>
                 </button>
-                <div class="absolute right-0 mt-2 w-48 bg-white rounded-2xl shadow-xl border border-gray-100 py-2 z-50 invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-all duration-300 transform origin-top-right group-hover:translate-y-0 translate-y-2">
+                <div class="profile-dropdown-menu absolute right-0 mt-2 w-48 bg-white rounded-2xl shadow-xl border border-gray-100 py-2 z-50 invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-all duration-200 transform origin-top-right group-hover:translate-y-0 translate-y-2">
                     <div class="px-4 py-2 border-b border-gray-50 mb-2">
                         <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Tetapan Akaun</p>
                     </div>
@@ -155,7 +174,6 @@ include 'sidebar.php';
                     <a href="tukar_password.php" class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-emerald-50 hover:text-emerald-700 transition-colors">
                         <i class="fas fa-key mr-3 opacity-50 w-4"></i> Tukar Password
                     </a>
-                    
                 </div>
             </div>
         </div>
@@ -183,44 +201,128 @@ include 'sidebar.php';
         <div class="bg-emerald-800/5 p-8 border-b border-emerald-100">
             <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
-                    <h3 class="text-xl font-extrabold text-emerald-950 uppercase tracking-tight">Status Permohonan Jenazah</h3>
+                    <h3 class="text-xl font-extrabold text-emerald-950 uppercase tracking-tight">Status Permohonan Lot Kubur</h3>
                     <p class="text-sm text-emerald-700">ID Permohonan: <span class="font-bold"><?php echo htmlspecialchars($id_permohonan); ?></span></p>
                 </div>
                 <div class="flex items-center space-x-2 bg-white px-4 py-2 rounded-xl shadow-sm border border-emerald-50">
-                    <span class="w-3 h-3 <?php echo $permohonan_wujud ? 'bg-yellow-500 animate-pulse' : 'bg-gray-300'; ?> rounded-full"></span>
-                    <span class="text-sm font-bold text-slate-700 tracking-tight uppercase"><?php echo $permohonan_wujud ? htmlspecialchars($app['status_proses']) : 'Tiada Permohonan'; ?></span>
+                    <span class="w-3 h-3 <?php 
+                        if (!$permohonan_wujud) echo 'bg-gray-300';
+                        elseif ($status_kod == -1) echo 'bg-red-500 animate-pulse';
+                        else echo 'bg-yellow-500 animate-pulse'; 
+                    ?> rounded-full"></span>
+                    <span class="text-sm font-bold <?php echo ($status_kod == -1) ? 'text-red-600' : 'text-slate-700'; ?> tracking-tight uppercase">
+                        <?php echo $permohonan_wujud ? htmlspecialchars($app['status_proses']) : 'Tiada Permohonan'; ?>
+                    </span>
                 </div>
             </div>
         </div>
         
         <div class="p-8 lg:p-12">
-            <div class="relative mb-12">
+            <!-- Rejection Comments Card -->
+            <?php if ($status_kod == -1): ?>
+                <div class="p-6 bg-red-50 border-l-4 border-red-500 rounded-2xl mb-8 flex items-start space-x-4 shadow-sm">
+                    <div class="bg-red-100 p-3 rounded-xl text-red-600">
+                        <i class="fas fa-times-circle text-2xl"></i>
+                    </div>
+                    <div class="flex-1">
+                        <h4 class="font-bold text-red-950 text-base">Permohonan Ditolak oleh Pentadbir</h4>
+                        <p class="text-sm text-red-800 mt-1">Maaf, permohonan tempahan lot kubur anda tidak dapat diluluskan atas sebab berikut:</p>
+                        <div class="mt-3 p-4 bg-white rounded-xl border border-red-100 text-sm font-semibold text-red-900 italic">
+                            "<?php echo htmlspecialchars($app['ulasan_admin'] ?? 'Tiada ulasan dinyatakan.'); ?>"
+                        </div>
+                        <p class="text-xs text-red-500 mt-3">*Sila hubungi pihak pentadbir Masjid Kariah Bangi untuk maklumat lanjut atau buat permohonan semula.</p>
+                    </div>
+                </div>
+            <?php endif; ?>
+
+            <!-- Stepper Container -->
+            <div class="relative mb-16 px-4">
+                <!-- Background Line (desktop only) -->
+                <div class="absolute top-5 left-8 right-8 h-1.5 bg-gray-100 -z-10 rounded-full hidden md:block">
+                    <!-- Dynamic Progress Line -->
+                    <div class="h-full bg-gradient-to-r from-emerald-500 via-emerald-600 to-teal-500 rounded-full transition-all duration-700" 
+                         style="width: <?php 
+                            if ($status_kod == 1) echo '12.5%';
+                            elseif ($status_kod == 2) echo '37.5%';
+                            elseif ($status_kod == 3) echo '62.5%';
+                            elseif ($status_kod >= 4) echo '100%';
+                            else echo '0%'; 
+                         ?>;">
+                    </div>
+                </div>
+
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
-                    <div class="text-center md:text-left <?php echo $status_kod < 1 ? 'opacity-30' : ''; ?>">
-                        <div class="w-10 h-10 <?php echo $status_kod >= 1 ? 'bg-emerald-600 text-white' : 'bg-white border-4 border-gray-200 text-gray-400'; ?> rounded-full flex items-center justify-center mx-auto md:mx-0 mb-4">
-                            <i class="fas fa-check text-sm"></i>
+                    <!-- Step 1: Permohonan -->
+                    <div class="flex flex-col items-center text-center">
+                        <div class="w-11 h-11 flex items-center justify-center rounded-xl transition-all duration-300 <?php 
+                            echo ($status_kod >= 1) 
+                                ? 'bg-emerald-600 text-white ring-4 ring-emerald-100 shadow-lg shadow-emerald-600/20' 
+                                : 'bg-gray-100 text-gray-400 border-2 border-gray-200'; 
+                        ?> mb-3">
+                            <i class="fas fa-file-signature text-sm"></i>
                         </div>
-                        <h4 class="font-bold text-emerald-900 text-sm uppercase">Permohonan</h4>
-                        <p class="text-xs text-slate-400"><?php echo $permohonan_wujud ? 'Dihantar' : 'Belum mula'; ?></p>
+                        <h4 class="font-bold text-emerald-950 text-sm uppercase tracking-wide">Permohonan</h4>
+                        <p class="text-xs font-semibold text-emerald-600 mt-1">Dihantar</p>
+                        <p class="text-[10px] text-gray-400 mt-0.5"><?php echo $permohonan_wujud ? date('d M Y', strtotime($app['tarikh_mohon'])) : '—'; ?></p>
                     </div>
-                    <div class="text-center md:text-left <?php echo $status_kod < 2 ? 'opacity-30' : ''; ?>">
-                        <div class="w-10 h-10 <?php echo $status_kod >= 2 ? 'bg-emerald-600 text-white' : 'bg-white border-4 border-emerald-600 text-emerald-600'; ?> rounded-full flex items-center justify-center mx-auto md:mx-0 mb-4 shadow-inner">
-                            <i class="fas <?php echo $status_kod == 2 ? 'fa-hourglass-half animate-spin' : 'fa-check'; ?> text-sm"></i>
+
+                    <!-- Step 2: Pengesahan -->
+                    <div class="flex flex-col items-center text-center">
+                        <div class="w-11 h-11 flex items-center justify-center rounded-xl transition-all duration-300 <?php 
+                            if ($status_kod > 2) {
+                                echo 'bg-emerald-600 text-white ring-4 ring-emerald-100 shadow-lg shadow-emerald-600/20';
+                            } elseif ($status_kod == 2) {
+                                echo 'bg-amber-500 text-white ring-4 ring-amber-100 animate-pulse shadow-lg shadow-amber-500/20';
+                            } else {
+                                echo 'bg-gray-100 text-gray-400 border-2 border-gray-200';
+                            }
+                        ?> mb-3">
+                            <i class="fas <?php echo $status_kod == 2 ? 'fa-spinner fa-spin' : 'fa-shield-alt'; ?> text-sm"></i>
                         </div>
-                        <h4 class="font-bold text-emerald-900 text-sm uppercase">Pengesahan</h4>
-                        <p class="text-xs text-slate-400 font-medium"><?php echo $status_kod == 2 ? 'Sedang disemak' : ($status_kod > 2 ? 'Selesai' : 'Menunggu'); ?></p>
+                        <h4 class="font-bold <?php echo $status_kod >= 2 ? 'text-emerald-950' : 'text-gray-400'; ?> text-sm uppercase tracking-wide">Pengesahan</h4>
+                        <p class="text-xs font-semibold <?php echo $status_kod == 2 ? 'text-amber-600' : ($status_kod > 2 ? 'text-emerald-600' : 'text-gray-400'); ?> mt-1">
+                            <?php echo $status_kod == 2 ? 'Sedang Disemak' : ($status_kod > 2 ? 'Disahkan' : 'Menunggu'); ?>
+                        </p>
                     </div>
-                    <div class="text-center md:text-left <?php echo $status_kod < 3 ? 'opacity-30' : ''; ?>">
-                        <div class="w-10 h-10 <?php echo $status_kod >= 3 ? 'bg-emerald-600 text-white' : 'bg-white border-4 border-gray-200 text-gray-400'; ?> rounded-full flex items-center justify-center mx-auto md:mx-0 mb-4">
+
+                    <!-- Step 3: Tugasan Lot -->
+                    <div class="flex flex-col items-center text-center">
+                        <div class="w-11 h-11 flex items-center justify-center rounded-xl transition-all duration-300 <?php 
+                            if ($status_kod > 3) {
+                                echo 'bg-emerald-600 text-white ring-4 ring-emerald-100 shadow-lg shadow-emerald-600/20';
+                            } elseif ($status_kod == 3) {
+                                echo 'bg-amber-500 text-white ring-4 ring-amber-100 animate-pulse shadow-lg shadow-amber-500/20';
+                            } else {
+                                echo 'bg-gray-100 text-gray-400 border-2 border-gray-200';
+                            }
+                        ?> mb-3">
                             <i class="fas fa-map-marker-alt text-sm"></i>
                         </div>
-                        <h4 class="font-bold text-emerald-900 text-sm uppercase">Tugasan Lot</h4>
+                        <h4 class="font-bold <?php echo $status_kod >= 3 ? 'text-emerald-950' : 'text-gray-400'; ?> text-sm uppercase tracking-wide">Tugasan Lot</h4>
+                        <p class="text-xs font-semibold <?php echo $status_kod == 3 ? 'text-amber-600' : ($status_kod > 3 ? 'text-emerald-600' : 'text-gray-400'); ?> mt-1">
+                            <?php 
+                                if (!empty($app['no_lot'])) {
+                                    echo "Lot " . htmlspecialchars($app['no_lot']);
+                                } else {
+                                    echo $status_kod == 3 ? 'Sedang Ditetapkan' : 'Belum Ditunjuk';
+                                }
+                            ?>
+                        </p>
                     </div>
-                    <div class="text-center md:text-left <?php echo $status_kod < 4 ? 'opacity-30' : ''; ?>">
-                        <div class="w-10 h-10 <?php echo $status_kod >= 4 ? 'bg-emerald-600 text-white' : 'bg-white border-4 border-gray-200 text-gray-400'; ?> rounded-full flex items-center justify-center mx-auto md:mx-0 mb-4">
+
+                    <!-- Step 4: Selesai -->
+                    <div class="flex flex-col items-center text-center">
+                        <div class="w-11 h-11 flex items-center justify-center rounded-xl transition-all duration-300 <?php 
+                            echo ($status_kod >= 4) 
+                                ? 'bg-emerald-700 text-white ring-4 ring-emerald-100 shadow-lg shadow-emerald-700/20' 
+                                : 'bg-gray-100 text-gray-400 border-2 border-gray-200'; 
+                        ?> mb-3">
                             <i class="fas fa-flag-checkered text-sm"></i>
                         </div>
-                        <h4 class="font-bold text-emerald-900 text-sm uppercase">Selesai</h4>
+                        <h4 class="font-bold <?php echo $status_kod >= 4 ? 'text-emerald-950' : 'text-gray-400'; ?> text-sm uppercase tracking-wide">Selesai</h4>
+                        <p class="text-xs font-semibold <?php echo $status_kod >= 4 ? 'text-emerald-700' : 'text-gray-400'; ?> mt-1">
+                            <?php echo $status_kod >= 4 ? 'Sedia Dilawat' : 'Menunggu Selesai'; ?>
+                        </p>
                     </div>
                 </div>
             </div>
@@ -246,12 +348,12 @@ include 'sidebar.php';
                         <h5 class="text-xs font-bold text-emerald-600 uppercase tracking-widest border-b border-emerald-100 pb-2 italic">Butiran Pengebumian</h5>
                         <div class="flex justify-between items-center gap-4">
                             <span class="text-sm text-slate-500">Lokasi Lot:</span>
-                            <span class="text-sm font-bold text-emerald-400 italic"><?php echo ($status_kod >= 3) ? htmlspecialchars($app['no_lot']) : 'Menunggu...'; ?></span>
+                            <span class="text-sm font-bold text-emerald-400 italic"><?php echo ($status_kod >= 3 && !empty($app['no_lot'])) ? htmlspecialchars($app['no_lot']) : 'Menunggu...'; ?></span>
                         </div>
                         <div class="flex justify-between items-center">
                             <span class="text-sm text-slate-500 tracking-tight">Resit Pembayaran:</span>
                             <?php if (!empty($app)): ?>
-                                <a href="resit.php?id=<?php echo $app['id']; ?>" class="text-[10px] font-bold bg-emerald-100 text-emerald-800 px-4 py-1.5 rounded-lg hover:bg-emerald-600 hover:text-white transition-all uppercase">Lihat</a>
+                                <a href="#" onclick="openReceiptModal('booking', <?php echo $app['id']; ?>); return false;" class="text-[10px] font-bold bg-emerald-100 text-emerald-800 px-4 py-1.5 rounded-lg hover:bg-emerald-600 hover:text-white transition-all uppercase">Lihat</a>
                             <?php else: ?>
                                 <span class="text-[10px] text-gray-400 italic">Tiada Resit</span>
                             <?php endif; ?>

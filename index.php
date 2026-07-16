@@ -1,3 +1,18 @@
+<?php
+require_once 'db.php';
+$baki_lot = 142; // default fallback
+try {
+    if (isset($pdo)) {
+        $stmt_count = $pdo->query("SELECT COUNT(*) FROM lot_pusara WHERE status_lot = 'Penuh'");
+        if ($stmt_count) {
+            $occupied_count = (int)$stmt_count->fetchColumn();
+            $baki_lot = max(0, 440 - $occupied_count);
+        }
+    }
+} catch (Exception $e) {
+    // Keep default fallback
+}
+?>
 <!DOCTYPE html>
 <html lang="ms">
 <head>
@@ -27,6 +42,8 @@
         }
         .ai-float { animation: pulse-soft 3s infinite; }
     </style>
+    <!-- AI Chatbot Assistant -->
+    <script src="chatbot.js" defer></script>
 </head>
 <body class="islamic-pattern font-sans text-gray-800">
 
@@ -43,6 +60,7 @@
                 <a href="carian.php" class="hover:text-emerald-600 transition">Cari Pusara</a>
                 <a href="login.php" class="hover:text-emerald-600 transition">Permohonan Lot</a>
                 <a href="login.php" class="hover:text-emerald-600 transition">Daftar Khairat</a>
+                <a href="infaq.php" class="hover:text-emerald-600 transition">Infaq Digital</a>
             </div>
             <div class="flex items-center space-x-4">
                 <a href="login.php" class="text-emerald-800 font-semibold hover:text-emerald-600 transition">Log Masuk</a>
@@ -58,7 +76,7 @@
             </div>
             <h1 class="text-5xl md:text-7xl font-bold mb-6">Satu Sistem, Urusan Pusara Lebih Teratur</h1>
             <p class="text-xl mb-10 text-emerald-50 leading-relaxed max-w-2xl mx-auto">
-                Carian lokasi pusara digital, navigasi Google Maps, dan permohonan lot kematian khusus untuk penduduk yang bermastautin di Bangi Lama.
+                Platform digital untuk carian pusara, navigasi ke lokasi kubur, dan pengurusan tempahan lot perkuburan di Masjid Kariah Bangi
             </p>
             
             <form action="carian.php" method="GET" id="carian" class="bg-white p-3 rounded-2xl shadow-2xl flex flex-col md:flex-row gap-3">
@@ -79,7 +97,7 @@
                 <div class="bg-emerald-100 p-4 rounded-2xl text-emerald-700"><i class="fas fa-layer-group text-3xl"></i></div>
                 <div>
                     <p class="text-gray-500 text-sm font-bold uppercase">Baki Kapasiti Lot</p>
-                    <h3 class="text-3xl font-black text-emerald-900">142 <span class="text-lg font-normal text-gray-400">Kekosongan</span></h3>
+                    <h3 class="text-3xl font-black text-emerald-900"><?php echo htmlspecialchars($baki_lot); ?> <span class="text-lg font-normal text-gray-400">Kekosongan</span></h3>
                 </div>
             </div>
             <div class="glass-card p-8 rounded-3xl shadow-xl border border-white flex items-center space-x-6">
@@ -124,8 +142,8 @@
                 <div class="w-16 h-16 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:bg-emerald-600 group-hover:text-white transition-colors">
                     <i class="fas fa-route text-2xl"></i>
                 </div>
-                <h4 class="font-bold text-xl mb-3 text-emerald-900">Navigasi GPS</h4>
-                <p class="text-gray-500 text-sm leading-relaxed">Gunakan fungsi 'Walking Distance' Google Maps untuk terus ke lokasi lot yang dicari.</p>
+                <h4 class="font-bold text-xl mb-3 text-emerald-900">Navigasi Pejalan Kaki</h4>
+                <p class="text-gray-500 text-sm leading-relaxed">Navigasi berjalan kaki dengan anggaran jarak dan masa perjalanan ke lokasi lot pusara yang dicari.</p>
             </div>
             <div class="p-8 bg-white rounded-3xl hover:shadow-2xl transition-all border border-transparent hover:border-emerald-100 group">
                 <div class="w-16 h-16 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:bg-emerald-600 group-hover:text-white transition-colors">
@@ -163,7 +181,7 @@
                         <span>Van Jenazah Disediakan</span>
                     </div>
                 </div>
-                <a href="signup.php" class="inline-block mt-10 bg-yellow-500 text-emerald-950 px-8 py-3 rounded-full font-black hover:bg-yellow-400 transition-all uppercase tracking-wider text-sm">
+                <a href="login.php" class="inline-block mt-10 bg-yellow-500 text-emerald-950 px-8 py-3 rounded-full font-black hover:bg-yellow-400 transition-all uppercase tracking-wider text-sm">
                     Daftar Ahli Sekarang
                 </a>
             </div>
@@ -182,9 +200,95 @@
         </div>
     </section>
 
+    <!-- INFAQ DIGITAL SECTION -->
+    <section id="infaq-digital" class="max-w-7xl mx-auto pb-24 px-6">
+        <div class="glass-card rounded-[40px] shadow-2xl border border-white overflow-hidden flex flex-col md:flex-row">
+            <!-- Left Side: Graphic / Info -->
+            <div class="p-12 md:w-1/2 bg-gradient-to-br from-emerald-950 to-emerald-900 text-white flex flex-col justify-center relative">
+                <div class="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/arabesque.png')] opacity-10"></div>
+                <div class="relative z-10">
+                    <span class="bg-emerald-800/80 text-yellow-400 px-4 py-2 rounded-full text-xs font-extrabold uppercase tracking-wider border border-emerald-700">
+                        <i class="fas fa-hand-holding-heart mr-2"></i>Amalan Jariah
+                    </span>
+                    <h3 class="text-3xl font-black mt-6 mb-4">Sumbangan Infaq Digital</h3>
+                    <p class="text-emerald-100/90 text-sm leading-relaxed mb-6">
+                        Bantu kami meringankan beban kewangan golongan asnaf dan keluarga kurang berkemampuan untuk membiayai kos pengurusan jenazah (penggalian lot kubur, kain kafan, van jenazah, dll.).
+                    </p>
+                    <div class="space-y-4">
+                        <div class="flex items-center space-x-3">
+                            <div class="bg-emerald-800/80 w-8 h-8 rounded-full flex items-center justify-center text-yellow-400 text-xs">
+                                <i class="fas fa-heart"></i>
+                            </div>
+                            <span class="text-sm font-semibold text-emerald-50">Sumbangan Ikhlas Hamba Allah</span>
+                        </div>
+                        <div class="flex items-center space-x-3">
+                            <div class="bg-emerald-800/80 w-8 h-8 rounded-full flex items-center justify-center text-yellow-400 text-xs">
+                                <i class="fas fa-shield-check"></i>
+                            </div>
+                            <span class="text-sm font-semibold text-emerald-50">Telus, Selamat, & Terus ke Tabung Kebajikan</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Side: Quick Donation Form -->
+            <div class="p-12 md:w-1/2 bg-white flex flex-col justify-center">
+                <h4 class="text-lg font-bold text-emerald-950 mb-6">Sumbang Secara Atas Talian</h4>
+                
+                <form action="payment.php" method="GET" class="space-y-4">
+                    <input type="hidden" name="type" value="infaq">
+                    
+                    <!-- Quick Amount buttons -->
+                    <div class="grid grid-cols-4 gap-2 mb-4">
+                        <button type="button" onclick="setQuickAmount(10)" class="quick-btn py-2.5 border border-slate-200 rounded-xl text-xs font-bold hover:border-emerald-600 hover:bg-emerald-50/50 transition">RM 10</button>
+                        <button type="button" onclick="setQuickAmount(30)" class="quick-btn py-2.5 border border-slate-200 rounded-xl text-xs font-bold hover:border-emerald-600 hover:bg-emerald-50/50 transition">RM 30</button>
+                        <button type="button" onclick="setQuickAmount(50)" class="quick-btn py-2.5 border border-slate-200 rounded-xl text-xs font-bold hover:border-emerald-600 hover:bg-emerald-50/50 transition">RM 50</button>
+                        <button type="button" onclick="setQuickAmount(100)" class="quick-btn py-2.5 border border-slate-200 rounded-xl text-xs font-bold hover:border-emerald-600 hover:bg-emerald-50/50 transition">RM 100</button>
+                    </div>
+
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-400 uppercase mb-2">Amaun Sumbangan (RM)</label>
+                        <input type="number" name="amount" id="infaqAmountInput" placeholder="Masukkan amaun sumbangan..." min="1" step="any" oninput="clearQuickBtns()" class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-semibold" required>
+                    </div>
+
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-400 uppercase mb-2">Nama Penderma (Biarkan kosong jika Hamba Allah)</label>
+                        <input type="text" name="name" placeholder="Nama anda (atau Hamba Allah)..." class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm font-medium">
+                    </div>
+
+                    <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3.5 rounded-xl font-bold transition shadow-lg shadow-emerald-600/10 flex items-center justify-center gap-2 mt-4 text-sm">
+                        <i class="fas fa-heart text-yellow-400"></i> Sumbang Sekarang
+                    </button>
+                </form>
+
+                <div class="text-center mt-4">
+                    <a href="infaq.php" class="text-xs text-emerald-700 hover:text-emerald-900 font-bold underline"><i class="fas fa-circle-info mr-1"></i>Ingin maklumat lanjut atau borang penuh? Klik di sini</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
     <footer class="bg-white border-t border-emerald-50 py-10 text-center">
-        <p class="text-gray-400 text-sm">© 2024 SmartGrave Bangi Lama. Urusan Pusara Digital Patuh Syariah.</p>
+        <p class="text-gray-400 text-sm">© 2026 SmartGrave Bangi Lama. Urusan Pusara Digital Patuh Syariah.</p>
     </footer>
 
+    <script>
+        function setQuickAmount(amount) {
+            document.getElementById('infaqAmountInput').value = amount;
+            clearQuickBtns();
+            // Highlight the clicked button
+            const btns = document.querySelectorAll('.quick-btn');
+            btns.forEach(btn => {
+                if (btn.innerText.includes(amount)) {
+                    btn.classList.add('bg-emerald-50', 'border-emerald-600', 'text-emerald-900');
+                }
+            });
+        }
+        function clearQuickBtns() {
+            document.querySelectorAll('.quick-btn').forEach(btn => {
+                btn.classList.remove('bg-emerald-50', 'border-emerald-600', 'text-emerald-900');
+            });
+        }
+    </script>
 </body>
 </html>

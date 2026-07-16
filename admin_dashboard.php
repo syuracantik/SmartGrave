@@ -3,8 +3,16 @@
 // admin_dashboard.php
 // SmartGrave - Sistem Pengurusan Tanah Perkuburan
 // ============================================================
+session_start();
 require_once 'db.php';
-require_once 'header.php';
+
+// Check if user is logged in and is admin / pentadbir
+if (!isset($_SESSION['user_id']) || (strtolower($_SESSION['role'] ?? '') !== 'pentadbir' && strtolower($_SESSION['role'] ?? '') !== 'admin')) {
+    header("Location: login.php");
+    exit();
+}
+
+$nama_user = $_SESSION['nama'] ?? 'Admin';
 
 // ---------------------------------------------------------------
 // Tindakan POST: Lulus / Tolak / Assign Lot
@@ -12,8 +20,7 @@ require_once 'header.php';
 
 $action = '';
 $tempahan_id = 0;
-$initial        = "U";
-$initial = !empty($nama_user) ? strtoupper(substr($nama_user, 0, 1)) : "U";
+$initial = !empty($nama_user) ? strtoupper(substr($nama_user, 0, 1)) : "A";
 
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -26,7 +33,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Kemas kini status tempahan
     $stmt = $pdo->prepare("
         UPDATE tempahan
-        SET status_proses = 'Lulus'
+        SET status_proses = 'Lulus', updated_at = NOW()
         WHERE id = ?
     ");
     $stmt->execute([$tempahan_id]);
@@ -93,7 +100,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $stmt = $pdo->prepare("
             UPDATE tempahan
-            SET status_proses = 'Tolak', ulasan_admin = ?
+            SET status_proses = 'Tolak', ulasan_admin = ?, updated_at = NOW()
             WHERE id = ?
         ");
         $stmt->execute([$ulasan_final, $tempahan_id]);
@@ -125,16 +132,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // ---------------------------------------------------------------
 // Query Statistik
 // ---------------------------------------------------------------
-$stmt = $pdo->query("SELECT COUNT(*) FROM lot_pusara WHERE status_lot = 'Tersedia'");
-$lotTersedia = $stmt->fetchColumn();
-
 $stmt = $pdo->query("SELECT COUNT(*) FROM lot_pusara WHERE status_lot = 'Penuh'");
-$lotPenuh = $stmt->fetchColumn();
+$lotPenuh = (int)$stmt->fetchColumn();
 
-$stmt = $pdo->query("SELECT COUNT(*) FROM lot_pusara");
-$lotJumlah = $stmt->fetchColumn();
+// Kapasiti keseluruhan kubur ialah 440
+$lotJumlah = 440;
+$lotTersedia = max(0, $lotJumlah - $lotPenuh);
 
-$peratusGuna = $lotJumlah > 0 ? round(($lotPenuh / $lotJumlah) * 100) : 0;
+$peratusGuna = round(($lotPenuh / $lotJumlah) * 100);
 
 $stmt = $pdo->query("SELECT COUNT(*) FROM tempahan WHERE status_proses = 'Bayaran Berjaya'");
 $tempahanPending = $stmt->fetchColumn();
@@ -157,14 +162,14 @@ $page   = max(1, (int)($_GET['page'] ?? 1));
 $perPage = 10;
 $offset  = ($page - 1) * $perPage;
 
-$whereClause = '';
+$whereClause = "WHERE NOT (t.status_proses IN ('Lulus', 'Tolak') AND t.updated_at < NOW() - INTERVAL '24 hours')";
 $params      = [];
 if ($filter === 'pending') {
-    $whereClause = "WHERE t.status_proses = 'Pending'";
+    $whereClause = "WHERE t.status_proses = 'Pending' AND NOT (t.status_proses IN ('Lulus', 'Tolak') AND t.updated_at < NOW() - INTERVAL '24 hours')";
 } elseif ($filter === 'lulus') {
-    $whereClause = "WHERE t.status_proses = 'Lulus'";
+    $whereClause = "WHERE t.status_proses = 'Lulus' AND t.updated_at >= NOW() - INTERVAL '24 hours'";
 } elseif ($filter === 'tolak') {
-    $whereClause = "WHERE t.status_proses = 'Tolak'";
+    $whereClause = "WHERE t.status_proses = 'Tolak' AND t.updated_at >= NOW() - INTERVAL '24 hours'";
 }
 
 $stmtCount = $pdo->prepare("SELECT COUNT(*) FROM tempahan t $whereClause");
@@ -213,20 +218,9 @@ $semuaTempahan = $stmt->fetchAll(PDO::FETCH_ASSOC);
 $stmtLot = $pdo->query("SELECT no_lot FROM lot_pusara WHERE status_lot = 'Tersedia' ORDER BY no_lot");
 $lotTersediaList = $stmtLot->fetchAll(PDO::FETCH_COLUMN);
 
+$title = "Dashboard Admin";
+require_once 'header.php';
 ?>
-<!DOCTYPE html>
-<html lang="ms">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard Admin | SmartGrave</title>
-
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-
     <style>
         :root {
             --font-display: 'Inter', sans-serif;
@@ -429,12 +423,6 @@ $lotTersediaList = $stmtLot->fetchAll(PDO::FETCH_COLUMN);
         .pag-btn.active { background:var(--emerald-800);border-color:var(--emerald-800);color:#fff; }
         .pag-btn.disabled { opacity:.35;pointer-events:none; }
     </style>
-</head>
-<body>
-
-<?php /* Header sudah di-include */ ?>
-
-<div class="dashboard-layout">
     <?php require_once 'sidebar2.php'; ?>
 
     <main class="main-content">
@@ -500,6 +488,7 @@ $lotTersediaList = $stmtLot->fetchAll(PDO::FETCH_COLUMN);
         <script>setTimeout(()=>{ const t=document.getElementById('toastMsg'); if(t) t.style.opacity='0', setTimeout(()=>t.remove(),400); }, 8000);</script>
         <?php endif; ?>
 
+
         <!-- ── Tajuk Halaman ── -->
         <div class="flex justify-between items-center mb-10">
         <div>
@@ -511,10 +500,10 @@ $lotTersediaList = $stmtLot->fetchAll(PDO::FETCH_COLUMN);
 
             
             <div class="relative group">
-                <button class="w-14 h-14 bg-white rounded-2xl shadow-sm border border-emerald-100 flex items-center justify-center text-emerald-800 font-bold text-xl border-b-4 border-b-emerald-700 hover:bg-emerald-50 transition-all cursor-pointer focus:outline-none">
+                <button class="profile-dropdown-btn w-14 h-14 bg-white rounded-2xl shadow-sm border border-emerald-100 flex items-center justify-center text-emerald-800 font-bold text-xl border-b-4 border-b-emerald-700 hover:bg-emerald-50 transition-all cursor-pointer focus:outline-none">
                     <?php echo $initial; ?>
                 </button>
-                <div class="absolute right-0 mt-2 w-48 bg-white rounded-2xl shadow-xl border border-gray-100 py-2 z-50 invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-all duration-300 transform origin-top-right group-hover:translate-y-0 translate-y-2">
+                <div class="profile-dropdown-menu absolute right-0 mt-2 w-48 bg-white rounded-2xl shadow-xl border border-gray-100 py-2 z-50 invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-all duration-200 transform origin-top-right group-hover:translate-y-0 translate-y-2">
                     <div class="px-4 py-2 border-b border-gray-50 mb-2">
                         <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Tetapan Akaun</p>
                     </div>
@@ -524,7 +513,7 @@ $lotTersediaList = $stmtLot->fetchAll(PDO::FETCH_COLUMN);
                     <a href="tukar_password.php" class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-emerald-50 hover:text-emerald-700 transition-colors">
                         <i class="fas fa-key mr-3 opacity-50 w-4"></i> Tukar Password
                     </a>
-                    </div>
+                </div>
             </div>
         </div>
 
@@ -533,7 +522,7 @@ $lotTersediaList = $stmtLot->fetchAll(PDO::FETCH_COLUMN);
         </div>
 
         <!-- ── Stat Cards ── -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5 mb-8">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 mb-8">
 
             <div class="stat-card emerald animate-up delay-1">
                 <div class="flex items-start justify-between">
@@ -563,23 +552,7 @@ $lotTersediaList = $stmtLot->fetchAll(PDO::FETCH_COLUMN);
                 </div>
             </div>
 
-            <div class="stat-card amber animate-up delay-3">
-                <div class="flex items-start justify-between">
-                    <div>
-                        <p class="stat-label">Tempahan Pending</p>
-                        <p class="stat-value"><?= number_format($tempahanPending) ?></p>
-                        <p class="text-xs text-slate-400 font-medium mt-1">Menunggu kelulusan admin</p>
-                    </div>
-                    <span class="stat-icon amber"><i class="fas fa-hourglass-half"></i></span>
-                </div>
-                <?php if ($tempahanPending > 0): ?>
-                <a href="?filter=pending" class="block mt-3 text-[11px] font-bold text-amber-600 hover:text-amber-700">
-                    Semak sekarang <i class="fas fa-arrow-right ml-1"></i>
-                </a>
-                <?php endif; ?>
-            </div>
-
-            <div class="stat-card blue animate-up delay-4">
+            <div class="stat-card blue animate-up delay-3">
                 <div class="flex items-start justify-between">
                     <div>
                         <p class="stat-label">Kutipan Bulan Ini</p>
@@ -599,7 +572,7 @@ $lotTersediaList = $stmtLot->fetchAll(PDO::FETCH_COLUMN);
                 <!-- Filter Tabs -->
                 <div class="flex gap-2 flex-wrap">
                     <?php
-                    $tabs = ['semua'=>'Semua','pending'=>'Pending','lulus'=>'Diluluskan','tolak'=>'Ditolak'];
+                    $tabs = ['semua'=>'Semua','pending'=>'Belum Diluluskan','lulus'=>'Diluluskan','tolak'=>'Ditolak'];
                     foreach ($tabs as $val => $label): ?>
                     <a href="?filter=<?= $val ?>" class="filter-tab <?= $filter === $val ? 'active' : '' ?>">
                         <?= $label ?>
@@ -666,8 +639,9 @@ $lotTersediaList = $stmtLot->fetchAll(PDO::FETCH_COLUMN);
                                 $s = $row['status_proses'];
                                 $badgeMap = ['Pending'=>'badge-pending','Lulus'=>'badge-lulus','Tolak'=>'badge-tolak','Bayaran Berjaya'=>'badge-bayaran'];
                                 $bc = $badgeMap[$s] ?? 'badge-pending';
+                                $s_display = ($s === 'Pending') ? 'Belum Diluluskan' : $s;
                                 ?>
-                                <span class="badge <?= $bc ?>">● <?= htmlspecialchars($s) ?></span>
+                                <span class="badge <?= $bc ?>">● <?= htmlspecialchars($s_display) ?></span>
                             </td>
                             <td>
                                 <div class="flex items-center justify-center gap-1.5">
@@ -695,12 +669,12 @@ $lotTersediaList = $stmtLot->fetchAll(PDO::FETCH_COLUMN);
                                     $s = $row['status_proses'];
                                     if ($s === 'Lulus') {
                                         $lot = !empty($row['lot_ditetapkan']) ? $row['lot_ditetapkan'] : '—';
-                                        $wa_msg = "Assalamualaikum / Salam Sejahtera. Permohonan tempahan lot kubur #" . $row['id'] . " bagi arwah " . $row['nama_jenazah'] . " telah DILULUSKAN. Lot yang ditetapkan: " . $lot . ". Anda kini boleh menyemak panduan navigasi di SmartGrave. Terima kasih.";
+                                        $wa_msg = "Assalamualaikum. Permohonan tempahan lot kubur #" . $row['id'] . " bagi arwah " . $row['nama_jenazah'] . " telah DILULUSKAN. Lot yang ditetapkan: " . $lot . ". Anda kini boleh menyemak panduan navigasi di SmartGrave. Terima kasih.";
                                     } else if ($s === 'Tolak') {
                                         $sebab = !empty($row['ulasan_admin']) ? $row['ulasan_admin'] : 'sebab-sebab tertentu';
-                                        $wa_msg = "Assalamualaikum / Salam Sejahtera. Permohonan tempahan lot kubur #" . $row['id'] . " bagi arwah " . $row['nama_jenazah'] . " terpaksa DITOLAK atas sebab: " . $sebab . ". Sila hubungi pihak kami jika ada sebarang kemusykilan. Terima kasih.";
+                                        $wa_msg = "Assalamualaikum. Permohonan tempahan lot kubur #" . $row['id'] . " bagi arwah " . $row['nama_jenazah'] . " terpaksa DITOLAK atas sebab: " . $sebab . ". Sila hubungi pihak kami jika ada sebarang kemusykilan. Terima kasih.";
                                     } else {
-                                        $wa_msg = "Assalamualaikum / Salam Sejahtera. Saya admin dari SmartGrave. Ingin bertanya lanjut berkenaan permohonan tempahan lot kubur #" . $row['id'] . " bagi arwah " . $row['nama_jenazah'] . ". Terima kasih.";
+                                        $wa_msg = "Assalamualaikum. Saya admin dari SmartGrave. Ingin bertanya lanjut berkenaan permohonan tempahan lot kubur #" . $row['id'] . " bagi arwah " . $row['nama_jenazah'] . ". Terima kasih.";
                                     }
                                     
                                     $wa_url = "https://wa.me/" . $wa_tel . "?text=" . urlencode($wa_msg);
@@ -722,6 +696,9 @@ $lotTersediaList = $stmtLot->fetchAll(PDO::FETCH_COLUMN);
                                         onclick="bukaModal('lulus', <?= htmlspecialchars(json_encode($row), ENT_QUOTES) ?>)">
                                         <i class="fas fa-check text-xs"></i>
                                     </button>
+                                    
+
+
                                     <!-- Tolak -->
                                     <button
                                         class="icon-btn icon-btn-tolak"
@@ -914,7 +891,7 @@ function bukaModal(jenis, data) {
         document.getElementById('viewModalSubtitle').textContent = 'Tempahan #' + data.id + ' — ' + data.waris_nama;
 
         const statusMap = {
-            'Pending'        : '<span class="badge badge-pending">● Pending</span>',
+            'Pending'        : '<span class="badge badge-pending">● Belum Diluluskan</span>',
             'Lulus'          : '<span class="badge badge-lulus">● Diluluskan</span>',
             'Tolak'          : '<span class="badge badge-tolak">● Ditolak</span>',
             'Bayaran Berjaya': '<span class="badge badge-bayaran">● Bayaran Berjaya</span>',
@@ -1003,6 +980,7 @@ function bukaModal(jenis, data) {
         document.getElementById('lainLainDiv').style.display = 'none';
         document.getElementById('modalTolak').classList.add('open');
     }
+
 }
 
 function tutupModal(jenis) {
@@ -1053,6 +1031,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 </script>
 
+</div> <!-- close the flex min-h-screen div from header.php -->
 </body>
 
 </html>

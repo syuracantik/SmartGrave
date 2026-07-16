@@ -6,44 +6,70 @@ $message = "";
 $status = "";
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $fullname  = $_POST['fullname'];
-    $ic_number = $_POST['ic_number'];
-    $username  = $_POST['username'];
-    $email     = $_POST['email'];
-    $phone     = $_POST['phone'];
-    $address   = $_POST['address'];
-    $gender    = $_POST['gender'];
-    $password  = password_hash($_POST['password'], PASSWORD_DEFAULT);
+    $fullname         = $_POST['fullname'];
+    $ic_number        = preg_replace('/[^0-9]/', '', $_POST['ic_number']);
+    $username         = trim($_POST['username']);
+    $email            = trim($_POST['email']);
+    $phone            = $_POST['phone'];
+    $address          = $_POST['address'];
+    $gender           = $_POST['gender'];
+    $password_raw     = $_POST['password'];
+    $password_confirm = $_POST['password_confirm'];
 
-    try {
-        // Sekarang satu INSERT je — tak perlu transaction atau insert ke waris
-        $stmt = $pdo->prepare("
-            INSERT INTO users 
-                (username, email, full_name, role, password, gender, ic_number, no_telefon, alamat)
-            VALUES 
-                (?, ?, ?, 'Waris', ?, ?, ?, ?, ?)
-        ");
-        $stmt->execute([
-            $username,
-            $email,
-            $fullname,
-            $password,
-            $gender,
-            $ic_number,
-            $phone,
-            $address
-        ]);
-
-        $status = "success";
-
-    } catch (PDOException $e) {
+    // Validations
+    if ($password_raw !== $password_confirm) {
         $status = "error";
-
-        // Duplicate entry (ic_number, username, atau email)
-        if (strpos($e->getMessage(), '23505') !== false) {
-            $message = "Maaf, No. IC, Username atau Emel ini sudah berdaftar.";
-        } else {
-            $message = "Ralat: " . $e->getMessage();
+        $message = "Sahkan kata laluan tidak sepadan dengan kata laluan.";
+    } elseif (strlen($password_raw) < 8) {
+        $status = "error";
+        $message = "Kata laluan mestilah sekurang-kurangnya 8 huruf/aksara.";
+    } elseif (!preg_match('/[A-Z]/', $password_raw)) {
+        $status = "error";
+        $message = "Kata laluan mestilah mengandungi sekurang-kurangnya satu (1) huruf besar.";
+    } else {
+        try {
+            // Check if username already exists
+            $stmt_check = $pdo->prepare("SELECT COUNT(*) FROM users WHERE username = ?");
+            $stmt_check->execute([$username]);
+            if ($stmt_check->fetchColumn() > 0) {
+                $status = "error";
+                $message = "ID Pengguna (Username) ini telah wujud. Sila gunakan ID lain.";
+            } else {
+                // Check if IC already exists
+                $stmt_check_ic = $pdo->prepare("SELECT COUNT(*) FROM users WHERE ic_number = ?");
+                $stmt_check_ic->execute([$ic_number]);
+                if ($stmt_check_ic->fetchColumn() > 0) {
+                    $status = "error";
+                    $message = "No. Kad Pengenalan ini telah wujud/berdaftar dalam sistem.";
+                } else {
+                    $password_hashed = password_hash($password_raw, PASSWORD_DEFAULT);
+                    // Insert user
+                    $stmt = $pdo->prepare("
+                        INSERT INTO users 
+                            (username, email, full_name, role, password, gender, ic_number, no_telefon, alamat)
+                        VALUES 
+                            (?, ?, ?, 'Waris', ?, ?, ?, ?, ?)
+                    ");
+                    $stmt->execute([
+                        $username,
+                        $email,
+                        $fullname,
+                        $password_hashed,
+                        $gender,
+                        $ic_number,
+                        $phone,
+                        $address
+                    ]);
+                    $status = "success";
+                }
+            }
+        } catch (PDOException $e) {
+            $status = "error";
+            if (strpos($e->getMessage(), '23505') !== false) {
+                $message = "Maaf, No. IC, Username atau Emel ini sudah berdaftar.";
+            } else {
+                $message = "Ralat: " . $e->getMessage();
+            }
         }
     }
 }
@@ -147,7 +173,23 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 <!-- Password -->
                 <div>
                     <label class="block text-[11px] font-bold text-emerald-900 uppercase mb-2 ml-1 opacity-70">Kata Laluan</label>
-                    <input type="password" name="password" class="w-full px-5 py-4 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none text-sm font-medium" placeholder="••••••••" required>
+                    <div class="relative">
+                        <input type="password" id="password" name="password" class="w-full pl-5 pr-12 py-4 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none text-sm font-medium" placeholder="••••••••" required>
+                        <button type="button" onclick="togglePassword('password', 'eyeIcon1')" class="absolute inset-y-0 right-0 flex items-center pr-4 text-gray-400 hover:text-emerald-700 transition-colors focus:outline-none">
+                            <i class="fas fa-eye" id="eyeIcon1"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Confirm Password -->
+                <div>
+                    <label class="block text-[11px] font-bold text-emerald-900 uppercase mb-2 ml-1 opacity-70">Sahkan Kata Laluan</label>
+                    <div class="relative">
+                        <input type="password" id="password_confirm" name="password_confirm" class="w-full pl-5 pr-12 py-4 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none text-sm font-medium" placeholder="••••••••" required>
+                        <button type="button" onclick="togglePassword('password_confirm', 'eyeIcon2')" class="absolute inset-y-0 right-0 flex items-center pr-4 text-gray-400 hover:text-emerald-700 transition-colors focus:outline-none">
+                            <i class="fas fa-eye" id="eyeIcon2"></i>
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -193,5 +235,15 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     </div>
     <?php endif; ?>
 
+    <script>
+        function togglePassword(inputId, eyeIconId) {
+            const passwordInput = document.getElementById(inputId);
+            const eyeIcon = document.getElementById(eyeIconId);
+            const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+            passwordInput.setAttribute('type', type);
+            eyeIcon.classList.toggle('fa-eye');
+            eyeIcon.classList.toggle('fa-eye-slash');
+        }
+    </script>
 </body>
 </html>

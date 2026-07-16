@@ -1,6 +1,15 @@
 <?php
+session_start();
 // Include fail sambungan database
 include 'db.php';
+
+// Check if user is logged in and is admin / pentadbir
+if (!isset($_SESSION['user_id']) || (strtolower($_SESSION['role'] ?? '') !== 'pentadbir' && strtolower($_SESSION['role'] ?? '') !== 'admin')) {
+    header("Location: login.php");
+    exit();
+}
+
+$nama_user = $_SESSION['nama'] ?? 'Admin';
 
 // ── AJAX: Delete ──────────────────────────────────────────────────────────────
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'delete') {
@@ -52,7 +61,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
 // ── Normal page load ──────────────────────────────────────────────────────────
 try {
-    $query = "SELECT * FROM daftar_khairat ORDER BY created_at DESC";
+    // Check if member has passed away by checking if their IC exists in maklumat_jenazah table (ignoring dashes)
+    $query = "
+        SELECT dk.*, 
+               EXISTS (
+                   SELECT 1 FROM maklumat_jenazah mj 
+                   WHERE REPLACE(mj.no_ic, '-', '') = REPLACE(dk.no_ic, '-', '')
+               ) AS telah_meninggal
+        FROM daftar_khairat dk
+        ORDER BY dk.created_at DESC
+    ";
     $stmt  = $pdo->prepare($query);
     $stmt->execute();
     $ahli_khairat = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -60,33 +78,20 @@ try {
     die("Error: " . $e->getMessage());
 }
 ?>
-<!DOCTYPE html>
-<html lang="ms">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Senarai Ahli Khairat - Admin</title>
-<script src="https://cdn.tailwindcss.com"></script>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<?php
+$title = "Senarai Ahli Khairat";
+include 'header.php';
+?>
 <style>
     *, *::before, *::after { box-sizing: border-box; }
     html, body { height: 100%; margin: 0; }
     body {
-    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-family: 'Inter', sans-serif;
     min-height: 100vh;
     position: relative;
     overflow-x: hidden;
-
-    background:
-        linear-gradient(
-            135deg,
-            rgba(16,185,129,0.04),
-            rgba(59,130,246,0.03),
-            rgba(255,255,255,0.96)
-        ),
-        #f8fafc;
+    background-color: #f8fafc;
+    background-image: url("https://www.transparenttextures.com/patterns/arabesque.png");
 }
 
 
@@ -195,7 +200,7 @@ tbody tr:hover{
     .search-input {
         width: 100%; background: white; border: 1.5px solid #e2e8f0;
         border-radius: 10px; padding: 10px 14px 10px 36px;
-        font-size: 13px; color: #374151; font-family: 'Plus Jakarta Sans', sans-serif;
+        font-size: 13px; color: #374151; font-family: 'Inter', sans-serif;
         transition: all .15s; box-shadow: 0 1px 3px rgba(0,0,0,.04);
     }
     .search-input:focus { outline:none; border-color:#3b82f6; box-shadow:0 0 0 3px rgba(59,130,246,.12); }
@@ -237,7 +242,7 @@ tbody tr:hover{
         width:100%; border:1.5px solid #e5e7eb; border-radius:8px;
         padding:9px 12px; font-size:13px; color:#1f2937; background:#fafafa;
         transition:border-color .15s, box-shadow .15s;
-        font-family:'Plus Jakarta Sans',sans-serif;
+        font-family:'Inter',sans-serif;
     }
     .field-input:focus { outline:none; border-color:#1d4ed8; box-shadow:0 0 0 3px rgba(29,78,216,.1); background:#fff; }
     select.field-input { cursor:pointer; }
@@ -266,14 +271,9 @@ tbody tr:hover{
     /* Loading spinner on save button */
     .btn-saving { pointer-events:none; opacity:.7; }
 </style>
-</head>
-<body class="bg-gray-100 min-h-screen">
+<?php include 'sidebar2.php'; ?>
 
-<div class="flex">
-    <?php include 'sidebar2.php'; ?>
-
-    <div class="flex-1 min-w-0">
-        <?php include 'header.php'; ?>
+<div class="flex-1 min-w-0">
 
         <main class="px-8 py-6 lg:px-10 xl:px-14 max-w-[1700px] mx-auto w-full">
 
@@ -343,7 +343,16 @@ tbody tr:hover{
                         <tbody id="tableBody">
                             <?php if (count($ahli_khairat) > 0): ?>
                                 <?php $no = 1; foreach ($ahli_khairat as $ahli): ?>
-                                <tr class="border-b border-gray-50 hover:bg-blue-50/40 row-animate"
+                                <?php 
+                                    $is_deceased = !empty($ahli['telah_meninggal']);
+                                    $row_class = $is_deceased 
+                                        ? 'bg-rose-50/70 hover:bg-rose-100/70 border-l-4 border-l-rose-500' 
+                                        : 'hover:bg-blue-50/40';
+                                    $avatar_bg = $is_deceased 
+                                        ? 'bg-rose-100 text-rose-700' 
+                                        : 'bg-blue-100 text-blue-700';
+                                ?>
+                                <tr class="border-b border-gray-50 row-animate <?php echo $row_class; ?>"
                                     id="row-<?php echo $ahli['id']; ?>"
                                     data-id="<?php echo $ahli['id']; ?>"
                                     data-nama="<?php echo strtolower(htmlspecialchars($ahli['nama_ahli'])); ?>"
@@ -358,11 +367,18 @@ tbody tr:hover{
 
                                     <td class="px-5 py-4">
                                         <div class="flex items-center gap-3">
-                                            <div class="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0 avatar-circle">
-                                                <span class="text-xs font-700 text-blue-700 uppercase avatar-initial"><?php echo mb_substr($ahli['nama_ahli'],0,1); ?></span>
+                                            <div class="w-8 h-8 rounded-full <?php echo $avatar_bg; ?> flex items-center justify-center flex-shrink-0 avatar-circle">
+                                                <span class="text-xs font-700 uppercase avatar-initial"><?php echo mb_substr($ahli['nama_ahli'],0,1); ?></span>
                                             </div>
                                             <div>
-                                                <p class="font-600 text-gray-800 searchable-nama cell-nama"><?php echo htmlspecialchars($ahli['nama_ahli']); ?></p>
+                                                <p class="font-600 text-gray-800 searchable-nama cell-nama">
+                                                    <?php echo htmlspecialchars($ahli['nama_ahli']); ?>
+                                                    <?php if ($is_deceased): ?>
+                                                        <span class="inline-flex items-center gap-1 bg-rose-100 text-rose-700 text-[10px] font-bold px-2 py-0.5 rounded-full ml-2 border border-rose-200 shadow-sm">
+                                                            <i class="fas fa-ribbon"></i> Meninggal Dunia
+                                                        </span>
+                                                    <?php endif; ?>
+                                                </p>
                                                 <p class="text-xs text-gray-400 mt-0.5 cell-pekerjaan"><?php echo htmlspecialchars($ahli['pekerjaan']); ?></p>
                                             </div>
                                         </div>
@@ -825,5 +841,7 @@ document.addEventListener('keydown', e => {
     }
 });
 </script>
+</div> <!-- close flex-1 min-w-0 -->
+</div> <!-- close flex min-h-screen from header.php -->
 </body>
 </html>

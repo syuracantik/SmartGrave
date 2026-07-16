@@ -94,6 +94,14 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     </div>
                 <?php endif; ?>
 
+                <?php if (isset($_GET['reset']) && $_GET['reset'] === 'success'): ?>
+                    <div class="p-4 bg-emerald-50 border-l-4 border-emerald-500 rounded-lg shadow-sm">
+                        <p class="text-emerald-800 text-[12px] font-semibold flex items-center">
+                            <i class="fas fa-check-circle mr-2 text-emerald-600"></i> Kata laluan berjaya ditukar! Sila log masuk.
+                        </p>
+                    </div>
+                <?php endif; ?>
+
                 <div>
                     <label class="block text-[11px] font-bold text-emerald-900 uppercase mb-2 ml-1 opacity-70">ID Pengguna / Emel</label>
                     <div class="relative group">
@@ -106,7 +114,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 </div>
 
                 <div>
-                    <label class="block text-[11px] font-bold text-emerald-900 uppercase mb-2 ml-1 opacity-70">Kata Laluan</label>
+                    <div class="flex justify-between items-center mb-2 ml-1">
+                        <label class="block text-[11px] font-bold text-emerald-900 uppercase opacity-70">Kata Laluan</label>
+                        <a href="forgot_password.php" class="text-[11px] font-bold text-emerald-700 hover:underline">Lupa Kata Laluan?</a>
+                    </div>
                     <div class="relative group">
                         <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-gray-400 group-focus-within:text-emerald-600 transition-colors">
                             <i class="fas fa-lock text-lg"></i>

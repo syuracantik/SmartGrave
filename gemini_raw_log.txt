@@ -1,0 +1,30 @@
+{
+  "candidates": [
+    {
+      "content": {
+        "parts": [
+          {
+            "text": "\u003col class='list-decimal pl-5 space-y-3'\u003e\n    \u003cli\u003e\u003cstrong\u003eMemperkasa Program Khairat & Pengurusan Jangka Panjang:\u003c/strong\u003e Walaupun Lot Tersedia mencukupi untuk lebih 60 tahun, jumlah Ahli Khairat Aktif yang sangat rendah (7 orang) berbanding purata pengebumian bulanan menunjukkan potensi isu kelestarian dan pengurusan jangka panjang. Cadangkan kempen kesedaran aktif secara berkala kepada komuniti Bangi Lama untuk meningkatkan jumlah ahli khairat. Fokuskan kepada faedah menjadi ahli (contoh: proses pengebumian dipermudah, sumbangan kepada pengurusan kubur) dan libatkan pemimpin komuniti serta masjid/surau setempat. Ini akan memastikan dana yang mampan untuk penyelenggaraan dan perancangan masa depan, walaupun tiada tunggakan yuran buat masa ini.\u003c/li\u003e\n    \u003cli\u003e\u003cstrong\u003eOptimasi Penggunaan Lot & Kajian Semula Keperluan Tanah:\u003c/strong\u003e Dengan Purata Pengebumian Sebulan yang sangat rendah (0.58 lot/bulan) dan Jangkaan Tempoh Penuh Kubur yang sangat panjang (62.2 tahun), tidak ada keperluan mendesak untuk fasa tanah baru. Sebaliknya, fokus perlu diberikan kepada pengurusan dan optimasi lot sedia ada. Lakukan audit berkala ke atas lot yang telah digunakan untuk memastikan keadaannya terpelihara. Pada masa yang sama, mulakan kajian awal tentang polisi penggunaan lot secara berhemah dan mungkin pertimbangkan pilihan pengebumian bertingkat (jika sesuai dengan adat dan perundangan tempatan) untuk memanjangkan lagi jangka hayat tanah sedia ada, walaupun belum kritikal.\u003c/li\u003e\n    \u003cli\u003e\u003cstrong\u003ePembangunan Sistem SmartGrave Berorientasi Komuniti:\u003c/strong\u003e Dengan jumlah ahli khairat yang sedikit dan anggaran kematian yang sangat rendah, sistem SmartGrave boleh diperluaskan fungsinya melangkaui sekadar rekod pengebumian. Cadangkan penambahan modul untuk interaksi komuniti seperti maklumat sejarah pusara terkemuka, pautan ke perkhidmatan keagamaan (solat jenazah, tahlil), atau platform untuk sukarelawan penyelenggaraan kubur. Ini akan meningkatkan nilai SmartGrave kepada komuniti, menarik lebih ramai ahli dan pengguna, sekaligus memupuk rasa kepunyaan dan tanggungjawab bersama terhadap pengurusan tanah perkuburan.\u003c/li\u003e\n\u003c/ol\u003e"
+          }
+        ],
+        "role": "model"
+      },
+      "finishReason": "STOP",
+      "index": 0
+    }
+  ],
+  "usageMetadata": {
+    "promptTokenCount": 290,
+    "candidatesTokenCount": 502,
+    "totalTokenCount": 792,
+    "promptTokensDetails": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 290
+      }
+    ],
+    "serviceTier": "standard"
+  },
+  "modelVersion": "gemini-2.5-flash",
+  "responseId": "4VdDav1_y-WO4w_ymef4Cg"
+}

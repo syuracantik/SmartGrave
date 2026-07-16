@@ -3,8 +3,10 @@ session_start();
 require_once 'db.php';
 
 if (!isset($_SESSION['user_id'])) {
-    header("Location: login.php");
-    exit();
+    if (!isset($_GET['type']) || $_GET['type'] !== 'infaq') {
+        header("Location: login.php");
+        exit();
+    }
 }
 
 define('STATUS_DIBAYAR',   'Dibayar');
@@ -14,7 +16,9 @@ define('YURAN_BOOKING',    1100);
 
 $title = "Pembayaran";
 include 'header.php';
-include 'sidebar.php';
+if (isset($_SESSION['user_id'])) {
+    include 'sidebar.php';
+}
 
 $error   = "";
 $success = "";
@@ -101,6 +105,31 @@ try {
         $page_title    = "Pembayaran Tempahan Lot Pusara";
         $page_desc     = "Bagi jenazah: " . htmlspecialchars($data['nama_jenazah']) . ($is_jenazah_ahli ? " <span class='text-emerald-600 font-bold'>(Ahli Khairat - Ditanggung Sepenuhnya)</span>" : "");
 
+    } elseif ($type === 'infaq') {
+        $infaq_amount = floatval($_GET['amount'] ?? 0);
+        if ($infaq_amount <= 0) {
+            $infaq_amount = floatval($_POST['infaq_amount'] ?? 0);
+        }
+        if ($infaq_amount <= 0) {
+            throw new InvalidArgumentException("Jumlah sumbangan infaq tidak sah.");
+        }
+
+        $nama_penderma = trim($_GET['name'] ?? '');
+        if (empty($nama_penderma)) {
+            $nama_penderma = trim($_POST['infaq_nama_penderma'] ?? '');
+        }
+        if (empty($nama_penderma)) {
+            $nama_penderma = 'Hamba Allah';
+        }
+
+        $data = [
+            'nama_penderma' => $nama_penderma,
+            'jumlah' => $infaq_amount
+        ];
+        $amaun_bayaran = $infaq_amount;
+        $page_title = "Sumbangan Infaq Digital";
+        $page_desc = "Sumbangan seikhlas hati untuk menampung kos pengurusan jenazah golongan yang memerlukan.";
+
     } else {
         throw new InvalidArgumentException("Jenis transaksi tidak dikenali.");
     }
@@ -138,7 +167,7 @@ try {
 
             $pdo->commit();
 
-            header("Location: resit.php?type=khairat&id=" . $khairat_id . "&ref=" . urlencode($reference_no));
+            echo "<script>window.location.href='resit.php?type=khairat&id=" . $khairat_id . "&ref=" . urlencode($reference_no) . "';</script>";
             exit();
         }
 
@@ -149,7 +178,7 @@ try {
 
             // PK dah tukar: id_tempahan → id
             $pdo->prepare("
-                UPDATE tempahan SET status_proses = 'Bayaran Berjaya' WHERE id = ?
+                UPDATE tempahan SET status_proses = 'Bayaran Berjaya', updated_at = NOW() WHERE id = ?
             ")->execute([$tempahan_id]);
 
             // FK bayaran dah tukar: id_tempahan → tempahan_id, id_khairat → khairat_id
@@ -160,8 +189,38 @@ try {
 
             $pdo->commit();
 
-            header("Location: resit.php?type=booking&id=" . $tempahan_id . "&ref=" . urlencode($reference_no));
+            echo "<script>window.location.href='resit.php?type=booking&id=" . $tempahan_id . "&ref=" . urlencode($reference_no) . "';</script>";
             exit();
+        }
+        elseif ($type === 'infaq') {
+            $infaq_amount = floatval($_POST['infaq_amount'] ?? 0);
+            $nama_penderma = trim($_POST['infaq_nama_penderma'] ?? 'Hamba Allah');
+            $email = isset($_GET['email']) ? trim($_GET['email']) : null;
+            $phone = isset($_GET['phone']) ? trim($_GET['phone']) : null;
+
+            if ($infaq_amount <= 0) throw new InvalidArgumentException("Jumlah sumbangan tidak sah.");
+
+            // 1. Insert into infaq table
+            $stmt_infaq = $pdo->prepare("
+                INSERT INTO infaq (nama_penderma, email, no_telefon, jumlah, kaedah_bayaran, tarikh_transaksi, no_rujukan)
+                VALUES (?, ?, ?, ?, ?, NOW(), ?)
+            ");
+            $stmt_infaq->execute([$nama_penderma, $email, $phone, $infaq_amount, $kaedah, $reference_no]);
+            $infaq_id = $pdo->lastInsertId();
+
+            // 2. Insert into bayaran table to make sure it shows in dashboard / reports
+            $stmt_bayaran = $pdo->prepare("
+                INSERT INTO bayaran (tempahan_id, khairat_id, infaq_id, jumlah, kaedah_bayaran, tarikh_transaksi, bukti_bayaran)
+                VALUES (NULL, NULL, ?, ?, ?, NOW(), NULL)
+            ");
+            $stmt_bayaran->execute([$infaq_id, $infaq_amount, $kaedah]);
+
+            $pdo->commit();
+
+            // 3. Redirect to resit.php
+            echo "<script>window.location.href='resit.php?type=infaq&id=" . $infaq_id . "&ref=" . urlencode($reference_no) . "';</script>";
+            exit();
+        }
         }
     }
 
@@ -336,6 +395,12 @@ try {
                         <tr><td>Tarikh Kematian</td><td><?php echo $data['tarikh_wafat'] ? date('d M Y', strtotime($data['tarikh_wafat'])) : '—'; ?></td></tr>
                         <tr><td>Lokasi Kematian</td><td><?php echo htmlspecialchars($data['lokasi_wafat']); ?></td></tr>
                     </table>
+                    <?php elseif ($type === 'infaq'): ?>
+                    <table class="detail-table">
+                        <tr><td>Jenis Transaksi</td><td>Infaq Masjid & Tabung Kebajikan</td></tr>
+                        <tr><td>Penderma</td><td><?php echo htmlspecialchars(strtoupper($data['nama_penderma'])); ?></td></tr>
+                        <tr><td>Jumlah Sumbangan</td><td>RM <?php echo number_format($data['jumlah'], 2); ?></td></tr>
+                    </table>
                     <?php endif; ?>
 
                     <hr class="divider">
@@ -357,6 +422,10 @@ try {
 
                         <form method="POST" enctype="multipart/form-data" id="paymentForm">
                             <input type="hidden" name="proses_bayaran" value="1">
+                            <?php if ($type === 'infaq'): ?>
+                                <input type="hidden" name="infaq_amount" value="<?php echo htmlspecialchars($data['jumlah']); ?>">
+                                <input type="hidden" name="infaq_nama_penderma" value="<?php echo htmlspecialchars($data['nama_penderma']); ?>">
+                            <?php endif; ?>
 
                             <!-- Kaedah bayaran -->
                             <div class="method-label">Kaedah Pembayaran</div>
@@ -572,6 +641,10 @@ try {
                         <div class="summary-item"><span class="s-label">Pengurusan Jenazah</span><span class="s-value">RM700.00</span></div>
                         <div class="summary-item"><span class="s-label">Sewa Lot Pusara</span><span class="s-value">RM300.00</span></div>
                         <div class="summary-item"><span class="s-label">Pentadbiran</span><span class="s-value">RM100.00</span></div>
+                    <?php elseif ($type === 'infaq'): ?>
+                        <div class="summary-item"><span class="s-label">Jenis Transaksi</span><span class="s-value">Sumbangan Infaq</span></div>
+                        <div class="summary-item"><span class="s-label">Penderma</span><span class="s-value"><?php echo htmlspecialchars($data['nama_penderma'] ?? 'HAMBA ALLAH'); ?></span></div>
+                        <div class="summary-item"><span class="s-label">Tujuan</span><span class="s-value">Tabung Kebajikan Kariah</span></div>
                     <?php endif; ?>
 
                     <div class="summary-total">
@@ -587,16 +660,20 @@ try {
 
                     <div style="margin-top:1.5rem;padding-top:1.25rem;border-top:1px solid var(--slate-100);">
                         <div style="font-size:.72rem;font-weight:700;color:var(--slate-400);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.85rem;">
-                            Termasuk Dalam Pakej
+                            <?php echo $type === 'infaq' ? 'Manfaat & Kelebihan Infaq' : 'Termasuk Dalam Pakej'; ?>
                         </div>
                         <?php
-                        $benefits = $type === 'khairat'
-                            ? ['Pengurusan jenazah percuma','Kafan & mandian','Pengurusan lot pusara','Sokongan 24 jam']
-                            : ['Pengurusan penuh jenazah','Kafan & mandian','Pengkebumian teratur','Sijil pengebumian'];
+                        if ($type === 'khairat') {
+                            $benefits = ['Pengurusan jenazah percuma', 'Kafan & mandian', 'Pengurusan lot pusara', 'Sokongan 24 jam'];
+                        } elseif ($type === 'booking') {
+                            $benefits = ['Pengurusan penuh jenazah', 'Kafan & mandian', 'Pengkebumian teratur', 'Sijil pengebumian'];
+                        } else {
+                            $benefits = ['Menyumbang jariah berterusan', 'Membantu keluarga kurang mampu', 'Menyelesaikan fardu kifayah kariah', 'Pembersih harta & jiwa'];
+                        }
                         foreach ($benefits as $b):
                         ?>
                         <div class="benefit-item">
-                            <i class="fas fa-circle-check" style="color:var(--green-500);font-size:.75rem;flex-shrink:0;"></i>
+                            <i class="fas <?php echo $type === 'infaq' ? 'fa-heart text-rose-500' : 'fa-circle-check text-emerald-500'; ?>" style="font-size:.75rem;flex-shrink:0;"></i>
                             <?php echo $b; ?>
                         </div>
                         <?php endforeach; ?>
@@ -751,6 +828,5 @@ document.getElementById('paymentForm')?.addEventListener('submit', function(e) {
     }
 });
 </script>
-
 </body>
 </html>

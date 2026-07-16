@@ -21,11 +21,13 @@ $error   = "";
 // Satu table je — tak perlu JOIN waris lagi
 // ============================================================
 $data_waris = ['nama' => '', 'no_ic' => '', 'telefon' => '', 'alamat' => ''];
+$status_kariah = "Bukan Ahli";
+$initial = "U";
 
 try {
     $stmtUser = $pdo->prepare("
         SELECT full_name AS nama, ic_number AS no_ic,
-               no_telefon AS telefon, alamat
+               no_telefon AS telefon, alamat, gender, status_khairat
         FROM users
         WHERE id = ?
         LIMIT 1
@@ -38,6 +40,35 @@ try {
         $data_waris['no_ic']   = preg_replace('/[^0-9]/', '', trim($row['no_ic']   ?? ''));
         $data_waris['telefon'] = trim($row['telefon'] ?? '');
         $data_waris['alamat']  = trim($row['alamat']  ?? '');
+        
+        $nama_user = $row['nama'];
+        
+        // Dynamically verify if they have registered Diri Sendiri and paid
+        $stmt_check_khairat = $pdo->prepare("
+            SELECT COUNT(*) 
+            FROM daftar_khairat 
+            WHERE user_id = ? AND (hubungan = 'Diri Sendiri' OR hubungan = 'DIRI SENDIRI') AND status_yuran = 'Dibayar'
+        ");
+        $stmt_check_khairat->execute([$user_id]);
+        $has_active_khairat = $stmt_check_khairat->fetchColumn() > 0;
+
+        $is_member = false;
+        if ($has_active_khairat) {
+            $is_member = true;
+            if (!$row['status_khairat']) {
+                $pdo->prepare("UPDATE users SET status_khairat = true WHERE id = ?")->execute([$user_id]);
+            }
+        } else {
+            $is_member = ($row['status_khairat'] === true || $row['status_khairat'] === 1 || $row['status_khairat'] === 't');
+        }
+
+        if ($is_member) {
+            $status_kariah  = "Ahli";
+        } else {
+            $status_kariah  = "Bukan Ahli";
+        }
+        
+        $initial = !empty($nama_user) ? strtoupper(substr($nama_user, 0, 1)) : "U";
     }
 
 } catch (PDOException $e) {
@@ -138,7 +169,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_khairat'])) {
             $khairat_id = $pdo->lastInsertId();
 
             // URL param ikut schema baru: khairat_id (bukan id_khairat)
-            header("Location: payment.php?type=khairat&khairat_id=" . $khairat_id);
+            echo "<script>window.location.href='payment.php?type=khairat&khairat_id=" . $khairat_id . "';</script>";
             exit();
         }
 
@@ -791,19 +822,47 @@ textarea.form-control { resize: vertical; min-height: 100px; }
     <!-- ================================================
          PAGE HEADER
     ================================================ -->
-    <div class="page-header">
+    <div class="flex flex-col lg:flex-row lg:items-center justify-between mb-10 gap-6">
         <div>
-            <h1>Daftar Ahli Khairat Kematian</h1>
-            <p>Daftarkan ahli keluarga untuk perlindungan khairat kematian</p>
+            <h1 class="text-3xl font-extrabold text-emerald-950 tracking-tight">Daftar Ahli Khairat Kematian</h1>
+            <p class="text-emerald-700 font-medium tracking-tight mt-1">Daftarkan ahli keluarga untuk perlindungan khairat kematian</p>
         </div>
 
-        <div class="header-badge">
-            <div class="header-badge-icon">
-                <i class="fas fa-shield-heart"></i>
+        <div class="flex flex-wrap items-center gap-4">
+            <!-- Badge Yuran Tahunan -->
+            <div class="flex items-center gap-3 bg-white border border-emerald-100 rounded-2xl px-5 py-3 shadow-sm">
+                <div class="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center text-emerald-700">
+                    <i class="fas fa-shield-heart text-lg"></i>
+                </div>
+                <div>
+                    <div class="text-[9px] font-bold text-gray-400 uppercase tracking-wider leading-none">Yuran Tahunan</div>
+                    <div class="text-base font-black text-emerald-900 mt-1">RM<?php echo YURAN_KHAIRAT; ?> / Orang</div>
+                </div>
             </div>
-            <div>
-                <div class="header-badge-label">Yuran Tahunan</div>
-                <div class="header-badge-value">RM<?php echo YURAN_KHAIRAT; ?> / Orang</div>
+
+            <!-- Profile Dropdown (Same as waris_dashboard.php) -->
+            <div class="flex items-center space-x-4 bg-white/50 p-2 rounded-2xl border border-emerald-50">
+                <div class="text-right hidden md:block px-2">
+                    <span class="block text-[10px] font-bold text-emerald-600 uppercase tracking-widest leading-none">Status Kariah</span>
+                    <span class="text-sm font-bold text-emerald-900"><?php echo htmlspecialchars($status_kariah); ?></span>
+                </div>
+                
+                <div class="relative group">
+                    <button class="profile-dropdown-btn w-14 h-14 bg-white rounded-2xl shadow-sm border border-emerald-100 flex items-center justify-center text-emerald-800 font-bold text-xl border-b-4 border-b-emerald-700 hover:bg-emerald-50 transition-all cursor-pointer focus:outline-none">
+                        <?php echo $initial; ?>
+                    </button>
+                    <div class="profile-dropdown-menu absolute right-0 mt-2 w-48 bg-white rounded-2xl shadow-xl border border-gray-100 py-2 z-50 invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-all duration-200 transform origin-top-right group-hover:translate-y-0 translate-y-2">
+                        <div class="px-4 py-2 border-b border-gray-50 mb-2">
+                            <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Tetapan Akaun</p>
+                        </div>
+                        <a href="edit_profile.php" class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-emerald-50 hover:text-emerald-700 transition-colors">
+                            <i class="fas fa-user-edit mr-3 opacity-50 w-4"></i> Edit Profil
+                        </a>
+                        <a href="tukar_password.php" class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-emerald-50 hover:text-emerald-700 transition-colors">
+                            <i class="fas fa-key mr-3 opacity-50 w-4"></i> Tukar Password
+                        </a>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -1094,7 +1153,8 @@ textarea.form-control { resize: vertical; min-height: 100px; }
                                 <?php else: ?>
                                     <div style="margin-top:.75rem; padding-top:.65rem; border-top: 1px solid rgba(0,0,0,.06); display:flex; justify-content:flex-end;">
                                         <a
-                                            href="resit.php?type=khairat&id=<?php echo (int)$ahli['id']; ?>"
+                                            href="#"
+                                            onclick="openReceiptModal('khairat', <?php echo (int)$ahli['id']; ?>); return false;"
                                             class="btn-pay"
                                             style="background: var(--slate-600); cursor: pointer;"
                                             onmouseover="this.style.background='var(--slate-700)'"

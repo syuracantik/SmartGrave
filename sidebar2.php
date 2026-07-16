@@ -18,7 +18,7 @@
                 <i class="fas fa-user-plus"></i> <span>Data Ahli Khairat Kematian</span>
             </a>
              <a href="laporan.php" class="flex items-center space-x-4 p-4 hover:bg-emerald-800/50 rounded-2xl transition text-emerald-100/70">
-                <i class="fas fa-user-plus"></i> <span>Laporan Strategik</span>
+                <i class="fas fa-chart-line"></i> <span>Laporan Strategik</span>
             </a>
             <hr class="border-emerald-800/50 my-6">
             <a href="index.php" class="flex items-center space-x-4 p-4 text-rose-300 hover:bg-rose-500/10 rounded-2xl transition font-semibold">

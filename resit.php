@@ -3,8 +3,10 @@ session_start();
 require_once 'db.php';
 
 if (!isset($_SESSION['user_id'])) {
-    header("Location: login.php");
-    exit();
+    if (!isset($_GET['type']) || $_GET['type'] !== 'infaq') {
+        header("Location: login.php");
+        exit();
+    }
 }
 
 // Support both 'booking' and 'khairat'
@@ -65,7 +67,7 @@ try {
         $back_url = "daftar_khairat.php";
         $back_label = "Kembali ke Senarai Ahli";
 
-    } else {
+    } elseif ($type === 'booking') {
         // Query Booking Receipt
         $stmt = $pdo->prepare("
             SELECT 
@@ -114,6 +116,37 @@ try {
         
         $back_url = "waris_dashboard.php";
         $back_label = "Kembali ke Dashboard";
+    } elseif ($type === 'infaq') {
+        // Query Infaq Receipt
+        $stmt = $pdo->prepare("
+            SELECT id, nama_penderma, email, no_telefon, jumlah, kaedah_bayaran, tarikh_transaksi, no_rujukan
+            FROM infaq
+            WHERE id = ?
+            LIMIT 1
+        ");
+        $stmt->execute([$id]);
+        $data = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$data) {
+            die("Resit tidak dijumpai");
+        }
+
+        $nama_arwah_atau_ahli = $data['nama_penderma'];
+        $no_ic_arwah_atau_ahli = "— (Sumbangan Infaq)";
+        $label_nama = "Nama Penderma";
+        $label_ic = "Kategori";
+        $extra_info = [
+            'E-mel' => $data['email'] ?: '—',
+            'No. Telefon' => $data['no_telefon'] ?: '—'
+        ];
+        
+        $status_label = 'SELESAI';
+        $no_resit = $data['no_rujukan'];
+        
+        $back_url = "index.php";
+        $back_label = "Kembali ke Laman Utama";
+    } else {
+        die("Jenis resit tidak dikenali");
     }
 
 } catch (Exception $e) {
@@ -190,9 +223,13 @@ try {
 <div class="max-w-xl mx-auto">
     <!-- BACK NAVIGATION (No Print) -->
     <div class="mb-6 no-print flex items-center justify-between">
-        <a href="<?php echo $back_url; ?>" class="inline-flex items-center gap-2 text-sm font-semibold text-emerald-800 hover:text-emerald-950 transition">
-            <i class="fas fa-arrow-left"></i> <?php echo $back_label; ?>
-        </a>
+        <?php if (!isset($_GET['embed'])): ?>
+            <a href="<?php echo $back_url; ?>" class="inline-flex items-center gap-2 text-sm font-semibold text-emerald-800 hover:text-emerald-950 transition">
+                <i class="fas fa-arrow-left"></i> <?php echo $back_label; ?>
+            </a>
+        <?php else: ?>
+            <div></div> <!-- Spacer -->
+        <?php endif; ?>
         <button onclick="window.print()" class="px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold rounded-xl shadow-md shadow-emerald-700/10 transition flex items-center gap-1.5">
             <i class="fas fa-print"></i> Cetak Resit
         </button>
@@ -256,7 +293,7 @@ try {
             
             <div class="flex justify-between items-center">
                 <span class="text-xs font-semibold text-slate-400 uppercase tracking-wide">Pembayar (Waris)</span>
-                <span class="text-xs font-bold text-slate-800 uppercase"><?php echo htmlspecialchars($data['nama_waris']); ?></span>
+                <span class="text-xs font-bold text-slate-800 uppercase"><?php echo htmlspecialchars($data['nama_waris'] ?? $data['nama_penderma'] ?? 'HAMBA ALLAH'); ?></span>
             </div>
 
             <div class="flex justify-between items-center">

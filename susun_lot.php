@@ -20,6 +20,9 @@ try {
     $pdo->exec("ALTER TABLE lot_pusara ADD COLUMN IF NOT EXISTS gambar_kiri VARCHAR(255)");
     $pdo->exec("ALTER TABLE lot_pusara ADD COLUMN IF NOT EXISTS gambar_kanan VARCHAR(255)");
     $pdo->exec("ALTER TABLE lot_pusara ADD COLUMN IF NOT EXISTS gambar_penanda VARCHAR(255)");
+    $pdo->exec("ALTER TABLE lot_pusara ADD COLUMN IF NOT EXISTS gambar_kiri_desc VARCHAR(255)");
+    $pdo->exec("ALTER TABLE lot_pusara ADD COLUMN IF NOT EXISTS gambar_kanan_desc VARCHAR(255)");
+    $pdo->exec("ALTER TABLE lot_pusara ADD COLUMN IF NOT EXISTS gambar_penanda_desc VARCHAR(255)");
 } catch (Exception $ex) {}
 
 // Handle POST: Assign vacant lot or update guide photos
@@ -64,6 +67,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action_assign'])) {
     $gambar_kanan_path = uploadGraveImage('gambar_kanan', $lot_id, 'kanan', $upload_dir);
     $gambar_penanda_path = uploadGraveImage('gambar_penanda', $lot_id, 'penanda', $upload_dir);
     
+    $gambar_kiri_desc = trim($_POST['gambar_kiri_desc'] ?? '');
+    $gambar_kanan_desc = trim($_POST['gambar_kanan_desc'] ?? '');
+    $gambar_penanda_desc = trim($_POST['gambar_penanda_desc'] ?? '');
+    
     try {
         $pdo->beginTransaction();
         
@@ -86,21 +93,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action_assign'])) {
             $waris_id = $booking['user_id'];
             $nama_jenazah = $booking['nama_jenazah'];
             
+            $gambar_penanda_desc = 'Kubur ' . $nama_jenazah;
+            
             // Insert or update in lot_pusara
             $stmt_save = $pdo->prepare("
-                INSERT INTO lot_pusara (no_lot, status_lot, jenazah_id, gambar_kiri, gambar_kanan, gambar_penanda)
-                VALUES (?, 'Penuh', ?, ?, ?, ?)
+                INSERT INTO lot_pusara (no_lot, status_lot, jenazah_id, gambar_kiri, gambar_kanan, gambar_penanda, gambar_kiri_desc, gambar_kanan_desc, gambar_penanda_desc)
+                VALUES (?, 'Penuh', ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT (no_lot)
                 DO UPDATE SET status_lot = 'Penuh', 
                               jenazah_id = EXCLUDED.jenazah_id,
                               gambar_kiri = COALESCE(NULLIF(EXCLUDED.gambar_kiri, ''), lot_pusara.gambar_kiri),
                               gambar_kanan = COALESCE(NULLIF(EXCLUDED.gambar_kanan, ''), lot_pusara.gambar_kanan),
-                              gambar_penanda = COALESCE(NULLIF(EXCLUDED.gambar_penanda, ''), lot_pusara.gambar_penanda)
+                              gambar_penanda = COALESCE(NULLIF(EXCLUDED.gambar_penanda, ''), lot_pusara.gambar_penanda),
+                              gambar_kiri_desc = EXCLUDED.gambar_kiri_desc,
+                              gambar_kanan_desc = EXCLUDED.gambar_kanan_desc,
+                              gambar_penanda_desc = EXCLUDED.gambar_penanda_desc
             ");
-            $stmt_save->execute([$lot_id, $jenazah_id, $gambar_kiri_path, $gambar_kanan_path, $gambar_penanda_path]);
+            $stmt_save->execute([$lot_id, $jenazah_id, $gambar_kiri_path, $gambar_kanan_path, $gambar_penanda_path, $gambar_kiri_desc, $gambar_kanan_desc, $gambar_penanda_desc]);
             
             // Update booking status
-            $stmt_tempahan = $pdo->prepare("UPDATE tempahan SET status_proses = 'Lulus' WHERE id = ?");
+            $stmt_tempahan = $pdo->prepare("UPDATE tempahan SET status_proses = 'Lulus', updated_at = NOW() WHERE id = ?");
             $stmt_tempahan->execute([$tempahan_id]);
             
             // Notify waris
@@ -111,18 +123,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action_assign'])) {
             $pdo->commit();
             
             // Redirect back to admin dashboard with success
-            header("Location: admin_dashboard.php?berjaya=lulus&tempahan_id=$tempahan_id");
+            echo "<script>window.location.href='admin_dashboard.php?berjaya=lulus&tempahan_id=$tempahan_id';</script>";
             exit;
         } else {
             // No active tempahan_id, this is a photo update for an already occupied lot
+            $stmt_nama = $pdo->prepare("
+                SELECT j.nama_jenazah 
+                FROM lot_pusara lp
+                JOIN maklumat_jenazah j ON lp.jenazah_id = j.id
+                WHERE lp.no_lot = ?
+            ");
+            $stmt_nama->execute([$lot_id]);
+            $nama_jenazah = $stmt_nama->fetchColumn();
+            if (!$nama_jenazah) {
+                $nama_jenazah = 'Arwah';
+            }
+            $gambar_penanda_desc = 'Kubur ' . $nama_jenazah;
+
             $stmt_update = $pdo->prepare("
                 UPDATE lot_pusara 
                 SET gambar_kiri = COALESCE(NULLIF(?, ''), gambar_kiri),
                     gambar_kanan = COALESCE(NULLIF(?, ''), gambar_kanan),
-                    gambar_penanda = COALESCE(NULLIF(?, ''), gambar_penanda)
+                    gambar_penanda = COALESCE(NULLIF(?, ''), gambar_penanda),
+                    gambar_kiri_desc = ?,
+                    gambar_kanan_desc = ?,
+                    gambar_penanda_desc = ?
                 WHERE no_lot = ? AND status_lot = 'Penuh'
             ");
-            $stmt_update->execute([$gambar_kiri_path, $gambar_kanan_path, $gambar_penanda_path, $lot_id]);
+            $stmt_update->execute([$gambar_kiri_path, $gambar_kanan_path, $gambar_penanda_path, $gambar_kiri_desc, $gambar_kanan_desc, $gambar_penanda_desc, $lot_id]);
             
             $pdo->commit();
             $msg_success = "Gambar panduan bagi Lot $lot_id berjaya dikemaskini!";
@@ -154,7 +182,8 @@ $occupied_graves = [];
 try {
     $stmt = $pdo->query("
         SELECT lp.no_lot AS id, j.nama_jenazah AS nama, j.no_ic AS ic, j.tarikh_wafat AS mati,
-               lp.gambar_kiri, lp.gambar_kanan, lp.gambar_penanda
+               lp.gambar_kiri, lp.gambar_kanan, lp.gambar_penanda,
+               lp.gambar_kiri_desc, lp.gambar_kanan_desc, lp.gambar_penanda_desc
         FROM lot_pusara lp
         JOIN maklumat_jenazah j ON lp.jenazah_id = j.id
         WHERE lp.status_lot = 'Penuh'
@@ -185,7 +214,10 @@ try {
                 'zon' => $zon,
                 'gambar_kiri' => $g['gambar_kiri'] ?? '',
                 'gambar_kanan' => $g['gambar_kanan'] ?? '',
-                'gambar_penanda' => $g['gambar_penanda'] ?? ''
+                'gambar_penanda' => $g['gambar_penanda'] ?? '',
+                'gambar_kiri_desc' => $g['gambar_kiri_desc'] ?? '',
+                'gambar_kanan_desc' => $g['gambar_kanan_desc'] ?? '',
+                'gambar_penanda_desc' => $g['gambar_penanda_desc'] ?? ''
             ];
         }
     }
@@ -457,41 +489,44 @@ try {
                 </div>
 
                 <!-- 3 Guide Images upload fields -->
-                <div class="space-y-3">
-                    <h4 class="text-xs font-bold text-slate-500 uppercase tracking-wider">Gambar Panduan Lokasi</h4>
+                <div class="space-y-4">
+                    <h4 class="text-xs font-bold text-slate-500 uppercase tracking-wider">Gambar Panduan Lokasi & Penerangan</h4>
                     
                     <div class="grid grid-cols-3 gap-3">
                         <!-- Image Left -->
                         <div class="space-y-1">
-                            <span class="text-[10px] font-bold text-slate-400 block text-center">Gambar Kiri</span>
+                            <span class="text-[10px] font-bold text-slate-400 block text-center">Gambar 1</span>
                             <div class="img-preview-box" onclick="triggerInput('fileLeft')">
                                 <span class="text-lg text-slate-400" id="previewIconLeft">📸</span>
-                                <span class="text-[8px] text-slate-400 font-mono" id="previewLblLeft">NISAN</span>
+                                <span class="text-[8px] text-slate-400 font-mono" id="previewLblLeft"></span>
                                 <img id="previewImgLeft">
                             </div>
                             <input type="file" name="gambar_kiri" id="fileLeft" class="hidden" accept="image/*" onchange="previewFile(this, 'previewImgLeft', 'previewIconLeft', 'previewLblLeft')">
+                            <input type="text" name="gambar_kiri_desc" id="descLeft" placeholder="Keterangan..." class="w-full text-[10px] px-2 py-1 border border-slate-200 rounded-lg mt-1" style="font-family:inherit;">
                         </div>
 
                         <!-- Image Right -->
                         <div class="space-y-1">
-                            <span class="text-[10px] font-bold text-slate-400 block text-center">Gambar Kanan</span>
+                            <span class="text-[10px] font-bold text-slate-400 block text-center">Gambar 2</span>
                             <div class="img-preview-box" onclick="triggerInput('fileRight')">
                                 <span class="text-lg text-slate-400" id="previewIconRight">📸</span>
-                                <span class="text-[8px] text-slate-400 font-mono" id="previewLblRight">KAWASAN</span>
+                                <span class="text-[8px] text-slate-400 font-mono" id="previewLblRight"></span>
                                 <img id="previewImgRight">
                             </div>
                             <input type="file" name="gambar_kanan" id="fileRight" class="hidden" accept="image/*" onchange="previewFile(this, 'previewImgRight', 'previewIconRight', 'previewLblRight')">
+                            <input type="text" name="gambar_kanan_desc" id="descRight" placeholder="Keterangan..." class="w-full text-[10px] px-2 py-1 border border-slate-200 rounded-lg mt-1" style="font-family:inherit;">
                         </div>
 
                         <!-- Image Penanda -->
                         <div class="space-y-1">
-                            <span class="text-[10px] font-bold text-slate-400 block text-center">Penanda Aras</span>
+                            <span class="text-[10px] font-bold text-slate-400 block text-center">Gambar Kubur</span>
                             <div class="img-preview-box" onclick="triggerInput('filePenanda')">
                                 <span class="text-lg text-slate-400" id="previewIconPenanda">📸</span>
-                                <span class="text-[8px] text-slate-400 font-mono" id="previewLblPenanda">LALUAN</span>
+                                <span class="text-[8px] text-slate-400 font-mono" id="previewLblPenanda"></span>
                                 <img id="previewImgPenanda">
                             </div>
                             <input type="file" name="gambar_penanda" id="filePenanda" class="hidden" accept="image/*" onchange="previewFile(this, 'previewImgPenanda', 'previewIconPenanda', 'previewLblPenanda')">
+                            <input type="hidden" name="gambar_penanda_desc" id="descPenanda">
                         </div>
                     </div>
                 </div>
@@ -756,10 +791,19 @@ function openLotDialog(id, coord, occupied) {
         setImgPreview('previewImgRight', 'previewIconRight', 'previewLblRight', info.gambar_kanan);
         setImgPreview('previewImgPenanda', 'previewIconPenanda', 'previewLblPenanda', info.gambar_penanda);
         
+        // Populate description values
+        document.getElementById('descLeft').value = info.gambar_kiri_desc || '';
+        document.getElementById('descRight').value = info.gambar_kanan_desc || '';
+        document.getElementById('descPenanda').value = info.gambar_penanda_desc || '';
+        
         // Disable assign submit button if no action is needed
         document.getElementById('btnSubmit').disabled = false;
     } else {
         // Lot is vacant
+        document.getElementById('descLeft').value = '';
+        document.getElementById('descRight').value = '';
+        document.getElementById('descPenanda').value = '';
+        
         if (ACTIVE_BOOKING) {
             document.getElementById('modalTitle').textContent = `Tetapkan Lot ${id}`;
             document.getElementById('modalSubtitle').textContent = "Sahkan penetapan permohonan ke lot ini.";

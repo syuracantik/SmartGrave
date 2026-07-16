@@ -1,7 +1,7 @@
 <?php
 // ============================================================
 // laporan.php
-// SmartGrave - Laporan Strategik & Analisis Aktuarial (Admin)
+// SmartGrave - Laporan Strategik & Ramalan Kematian (Admin)
 // ============================================================
 session_start();
 require_once 'db.php';
@@ -139,7 +139,7 @@ try {
     <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-4 bg-white p-6 rounded-3xl border border-gray-100 shadow-sm">
         <div>
             <h1 class="text-3xl font-extrabold text-emerald-950 tracking-tight">Laporan Strategik & Analisis</h1>
-            <p class="text-emerald-700 font-medium mt-1">Analisis demografi kariah, unjuran aktuarial kematian, dan baki hayat kapasiti lot.</p>
+            <p class="text-emerald-700 font-medium mt-1">Analisis demografi kariah, anggaran kematian setahun, dan jangkaan tempoh penuh lot.</p>
         </div>
         <button onclick="window.print()" class="flex items-center gap-2 px-5 py-2.5 bg-emerald-800 text-white rounded-2xl font-bold text-sm hover:bg-emerald-700 transition shadow-md shadow-emerald-900/10">
             <i class="fa-solid fa-print"></i> Cetak Laporan PDF
@@ -168,7 +168,7 @@ try {
         <div>
             <h3 class="text-base font-extrabold text-emerald-950">Status Kapasiti Perkuburan: Stabil</h3>
             <p class="text-xs mt-1">
-                Baki hayat pusara diunjurkan selama <strong><?= $remaining_years ?> tahun</strong> dengan purata <strong><?= $monthly_burial_rate ?> pengebumian</strong> sebulan. Kapasiti semasa mencukupi untuk keperluan kariah.
+                Pada kadar penggunaan sekarang, dianggarkan tanah kubur yang ada dijangka masih cukup untuk <strong><?= $remaining_years ?> tahun</strong> dengan purata <strong><?= $monthly_burial_rate ?> pengebumian</strong> sebulan. Kapasiti semasa mencukupi untuk keperluan kariah.
             </p>
         </div>
     </div>
@@ -224,14 +224,15 @@ try {
                 <div class="p-3.5 bg-purple-50 text-purple-600 rounded-2xl">
                     <i class="fa-solid fa-hourglass-half text-xl"></i>
                 </div>
-                <span class="text-[10px] font-bold bg-purple-50 text-purple-600 px-2.5 py-1 rounded-full uppercase tracking-wider">Hayat Baki</span>
+                <span class="text-[10px] font-bold bg-purple-50 text-purple-600 px-2.5 py-1 rounded-full uppercase tracking-wider">Jangkaan Penuh</span>
             </div>
             <div class="mt-8">
-                <p class="text-slate-400 text-xs font-semibold uppercase tracking-wider">Anggaran Baki Hayat</p>
+                <p class="text-slate-400 text-xs font-semibold uppercase tracking-wider">Anggaran Baki Tempoh Lot Kubur</p>
                 <h3 class="text-3xl font-black text-slate-800 mt-1"><?= $remaining_years ?> <span class="text-xs font-normal text-slate-400">Tahun</span></h3>
             </div>
         </div>
     </div>
+
 
     <!-- Actuarial Demand & Age Demographics Section -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-10">
@@ -240,9 +241,9 @@ try {
         <div class="bg-gradient-to-br from-emerald-800 to-emerald-950 p-8 rounded-[2.5rem] shadow-xl text-white flex flex-col justify-between">
             <div>
                 <span class="text-[10px] font-bold bg-white/20 text-emerald-200 px-3 py-1.5 rounded-full uppercase tracking-wider">Ramalan Strategik</span>
-                <h4 class="text-xl font-extrabold mt-6 leading-tight">Unjuran Kematian Aktuarial (12 Bulan)</h4>
+                <h4 class="text-xl font-extrabold mt-6 leading-tight">Anggaran Kematian Setahun (12 Bulan)</h4>
                 <p class="text-xs text-emerald-200 mt-2 leading-relaxed">
-                    Berdasarkan taburan umur ahli khairat aktif menggunakan pekali risiko mortaliti standard Malaysia.
+                    Berdasarkan taburan umur ahli khairat aktif menggunakan kadar purata kematian kebangsaan.
                 </p>
             </div>
             
@@ -368,6 +369,35 @@ try {
         </div>
     </div>
 
+
+
+    <!-- AI Recommendations Row -->
+    <div class="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm mb-10">
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+            <div class="flex items-center gap-3">
+                <div class="p-3 bg-purple-50 text-purple-700 rounded-2xl">
+                    <i class="fa-solid fa-wand-magic-sparkles text-xl animate-pulse"></i>
+                </div>
+                <div>
+                    <h4 class="text-lg font-extrabold text-slate-900">✨ Rekomendasi Pintar AI</h4>
+                    <p class="text-xs text-slate-400">Cadangan strategi pengurusan kubur yang dijana oleh kecerdasan buatan</p>
+                </div>
+            </div>
+            <button id="btnRegenAI" onclick="fetchAIRecommendations()" class="px-4 py-2 bg-purple-50 hover:bg-purple-100 text-purple-700 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm">
+                <i class="fa-solid fa-arrows-rotate"></i> Jana Semula
+            </button>
+        </div>
+        
+        <div id="aiRecContent" class="text-sm text-slate-600 leading-relaxed min-h-[80px]">
+            <!-- Skeleton Loading -->
+            <div class="animate-pulse space-y-3">
+                <div class="h-4 bg-slate-100 rounded w-3/4"></div>
+                <div class="h-4 bg-slate-100 rounded"></div>
+                <div class="h-4 bg-slate-100 rounded w-5/6"></div>
+            </div>
+        </div>
+    </div>
+
     <!-- Footer copyright -->
     <footer class="text-center text-slate-400 text-[10px] tracking-widest uppercase py-6">
         &copy; 2026 SmartGrave Bangi Lama. Sistem Pengurusan Jenazah Digital Patuh Syariah.
@@ -444,6 +474,40 @@ try {
             }
         }
     });
+
+    // 3. AI Recommendations Fetch
+    document.addEventListener("DOMContentLoaded", () => {
+        fetchAIRecommendations();
+    });
+
+    async function fetchAIRecommendations() {
+        const container = document.getElementById("aiRecContent");
+        const btn = document.getElementById("btnRegenAI");
+        
+        container.innerHTML = `
+            <div class="animate-pulse space-y-3">
+                <div class="h-4 bg-slate-100 rounded w-3/4"></div>
+                <div class="h-4 bg-slate-100 rounded"></div>
+                <div class="h-4 bg-slate-100 rounded w-5/6"></div>
+            </div>
+        `;
+        if (btn) btn.disabled = true;
+
+        try {
+            const response = await fetch("laporan_api.php");
+            const data = await response.json();
+            
+            if (data.status === "success" && data.recommendations) {
+                container.innerHTML = data.recommendations;
+            } else {
+                container.innerHTML = `<div class="text-red-500 text-xs flex items-center gap-1.5"><i class="fa-solid fa-triangle-exclamation"></i> Gagal menjana rekomendasi: ${data.message || 'Ralat tidak diketahui'}</div>`;
+            }
+        } catch (err) {
+            container.innerHTML = `<div class="text-red-500 text-xs flex items-center gap-1.5"><i class="fa-solid fa-triangle-exclamation"></i> Ralat sambungan ke pelayan AI.</div>`;
+        } finally {
+            if (btn) btn.disabled = false;
+        }
+    }
 </script>
 </body>
 </html>
