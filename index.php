@@ -60,7 +60,6 @@ try {
                 <a href="carian.php" class="hover:text-emerald-600 transition">Cari Pusara</a>
                 <a href="login.php" class="hover:text-emerald-600 transition">Permohonan Lot</a>
                 <a href="login.php" class="hover:text-emerald-600 transition">Daftar Khairat</a>
-                <a href="infaq.php" class="hover:text-emerald-600 transition">Infaq Digital</a>
             </div>
             <div class="flex items-center space-x-4">
                 <a href="login.php" class="text-emerald-800 font-semibold hover:text-emerald-600 transition">Log Masuk</a>
@@ -212,7 +211,7 @@ try {
                     </span>
                     <h3 class="text-3xl font-black mt-6 mb-4">Sumbangan Infaq Digital</h3>
                     <p class="text-emerald-100/90 text-sm leading-relaxed mb-6">
-                        Bantu kami meringankan beban kewangan golongan asnaf dan keluarga kurang berkemampuan untuk membiayai kos pengurusan jenazah (penggalian lot kubur, kain kafan, van jenazah, dll.).
+                        Bantu kami meringankan beban kewangan golongan asnaf dan keluarga kurang berkemampuan untuk membiayai kos pengurusan jenazah.
                     </p>
                     <div class="space-y-4">
                         <div class="flex items-center space-x-3">
@@ -252,18 +251,14 @@ try {
                     </div>
 
                     <div>
-                        <label class="block text-[10px] font-bold text-slate-400 uppercase mb-2">Nama Penderma (Biarkan kosong jika Hamba Allah)</label>
-                        <input type="text" name="name" placeholder="Nama anda (atau Hamba Allah)..." class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm font-medium">
+                        <label class="block text-[10px] font-bold text-slate-400 uppercase mb-2">Nama Penderma (Biarkan kosong jika tidak ingin dinyatakan)</label>
+                        <input type="text" name="name" placeholder="Nama..." class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm font-medium">
                     </div>
 
                     <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3.5 rounded-xl font-bold transition shadow-lg shadow-emerald-600/10 flex items-center justify-center gap-2 mt-4 text-sm">
                         <i class="fas fa-heart text-yellow-400"></i> Sumbang Sekarang
                     </button>
                 </form>
-
-                <div class="text-center mt-4">
-                    <a href="infaq.php" class="text-xs text-emerald-700 hover:text-emerald-900 font-bold underline"><i class="fas fa-circle-info mr-1"></i>Ingin maklumat lanjut atau borang penuh? Klik di sini</a>
-                </div>
             </div>
         </div>
     </section>

@@ -469,6 +469,8 @@ document.addEventListener("DOMContentLoaded", () => {
             .replace(/&gt; \[!WARNING\](.*?)($|<br>)/gi, "<div class='chat-alert chat-alert-warning'><i class='fas fa-exclamation-triangle mr-2'></i><strong>PENTING:</strong>$1</div>")
             .replace(/&gt; \[!NOTE\](.*?)($|<br>)/gi, "<div class='chat-alert chat-alert-note'><i class='fas fa-info-circle mr-2'></i>$1</div>")
             .replace(/&gt; (.*?)($|<br>)/g, "<blockquote class='border-l-4 border-slate-300 pl-3 italic my-2 text-slate-500'>$1</blockquote>")
+            // Ganti pautan Markdown [text](url)
+            .replace(/\[([^\]]+)\]\(([^)]+)\)/g, "<a href='$2' target='_blank' style='color:#059669;font-weight:bold;text-decoration:underline;'>$1</a>")
             // Ganti bullet list (di awal baris atau selepas tag <br>)
             .replace(/(?:^|<br>)\s*\*\s*(.*?)(?=$|<br>)/g, (match, p1) => {
                 return `<div class="flex items-start gap-2 my-1"><span class="text-emerald-600 mt-1.5 text-xs"><i class="fas fa-circle"></i></span><div>${p1}</div></div>`;

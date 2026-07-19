@@ -44,7 +44,7 @@ try {
         LIMIT 6
     ")->fetchAll(PDO::FETCH_ASSOC);
     
-    $months = json_encode(array_reverse(array_column($chart_query, 'bulan')));
+    $labels = json_encode(array_reverse(array_column($chart_query, 'bulan')));
     $amounts = json_encode(array_reverse(array_column($chart_query, 'total')));
 
     // E. Analisis Demografi Mengikut Umur Ahli Khairat (dari No. IC)
@@ -404,6 +404,9 @@ try {
     </footer>
 </main>
 
+<!-- Load Chart.js Library -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
 <!-- Chart JS Scripting -->
 <script>
     // 1. Chart Bayaran (Bar Chart)
@@ -417,7 +420,7 @@ try {
     new Chart(ctxRevenue, {
         type: 'bar',
         data: {
-            labels: <?= $months ?>,
+            labels: <?= $labels ?>,
             datasets: [{
                 label: 'Kutipan Bulanan (RM)',
                 data: <?= $amounts ?>,

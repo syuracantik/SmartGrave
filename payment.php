@@ -16,7 +16,7 @@ define('YURAN_BOOKING',    1100);
 
 $title = "Pembayaran";
 include 'header.php';
-if (isset($_SESSION['user_id'])) {
+if (isset($_SESSION['user_id']) && (trim($_GET['type'] ?? $_POST['type'] ?? '') !== 'infaq')) {
     include 'sidebar.php';
 }
 
@@ -166,9 +166,9 @@ try {
             }
 
             $pdo->commit();
-
-            echo "<script>window.location.href='resit.php?type=khairat&id=" . $khairat_id . "&ref=" . urlencode($reference_no) . "';</script>";
-            exit();
+            $payment_success = true;
+            $success_type = 'khairat';
+            $success_id = $khairat_id;
         }
 
         // --------------------------------------------------------
@@ -188,9 +188,9 @@ try {
             ")->execute([$tempahan_id, $amaun_bayaran, $kaedah]);
 
             $pdo->commit();
-
-            echo "<script>window.location.href='resit.php?type=booking&id=" . $tempahan_id . "&ref=" . urlencode($reference_no) . "';</script>";
-            exit();
+            $payment_success = true;
+            $success_type = 'booking';
+            $success_id = $tempahan_id;
         }
         elseif ($type === 'infaq') {
             $infaq_amount = floatval($_POST['infaq_amount'] ?? 0);
@@ -216,11 +216,9 @@ try {
             $stmt_bayaran->execute([$infaq_id, $infaq_amount, $kaedah]);
 
             $pdo->commit();
-
-            // 3. Redirect to resit.php
-            echo "<script>window.location.href='resit.php?type=infaq&id=" . $infaq_id . "&ref=" . urlencode($reference_no) . "';</script>";
-            exit();
-        }
+            $payment_success = true;
+            $success_type = 'infaq';
+            $success_id = $infaq_id;
         }
     }
 
@@ -328,6 +326,17 @@ try {
 }
 </style>
 
+<?php if ((trim($_GET['type'] ?? $_POST['type'] ?? '')) === 'infaq'): ?>
+<style>
+    .page-main {
+        max-width: 960px;
+        margin: 0 auto;
+        width: 100%;
+        padding: 3rem 2rem 5rem;
+    }
+</style>
+<?php endif; ?>
+
 <main class="page-main">
 
     <!-- BACK LINK -->
@@ -335,6 +344,8 @@ try {
         <a href="daftar_khairat.php" class="back-link"><i class="fas fa-arrow-left"></i> Kembali ke Daftar Khairat</a>
     <?php elseif ($type === 'booking'): ?>
         <a href="booking.php" class="back-link"><i class="fas fa-arrow-left"></i> Kembali ke Borang Tempahan</a>
+    <?php elseif ($type === 'infaq'): ?>
+        <a href="index.php" class="back-link"><i class="fas fa-arrow-left"></i> Kembali ke Laman Utama</a>
     <?php endif; ?>
 
     <!-- ERROR -->
@@ -485,6 +496,15 @@ try {
                             <div class="security-note">
                                 <i class="fas fa-shield"></i>
                                 Transaksi ini selamat dan disulitkan
+                            </div>
+
+                            <!-- Bantuan Pembayaran WhatsApp Admin -->
+                            <div style="margin-top: 1.5rem; padding: 1rem; background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 0.75rem; font-size: 0.8rem; text-align: center; color: #166534;">
+                                <p style="font-weight: 700; margin-bottom: 0.25rem;">Menghadapi masalah untuk membuat pembayaran?</p>
+                                <p style="margin-bottom: 0.5rem; color: #15803d; font-size: 0.75rem;">Sila hubungi pentadbir sistem melalui WhatsApp untuk bantuan segera.</p>
+                                <a href="https://wa.me/601112345678?text=Saya%20mengalami%20masalah%20ketika%20membuat%20pembayaran%20yuran/tempahan%20di%20SmartGrave" target="_blank" style="display: inline-flex; align-items: center; gap: 0.5rem; background-color: #16a34a; color: white; padding: 0.5rem 1rem; border-radius: 9999px; font-weight: 700; text-decoration: none; transition: background-color 0.2s;" onmouseover="this.style.backgroundColor='#15803d'" onmouseout="this.style.backgroundColor='#16a34a'">
+                                    <i class="fab fa-whatsapp" style="font-size: 1rem;"></i> Hubungi Admin WhatsApp
+                                </a>
                             </div>
 
                         </form>
@@ -828,5 +848,16 @@ document.getElementById('paymentForm')?.addEventListener('submit', function(e) {
     }
 });
 </script>
+
+<?php if (isset($payment_success) && $payment_success): ?>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    openReceiptModal('<?= $success_type ?>', <?= $success_id ?>);
+});
+function closeReceiptModal() {
+    window.location.href = "<?= ($success_type === 'booking') ? 'waris_dashboard.php' : (($success_type === 'khairat') ? 'daftar_khairat.php' : 'index.php') ?>";
+}
+</script>
+<?php endif; ?>
 </body>
 </html>

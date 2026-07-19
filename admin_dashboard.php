@@ -69,34 +69,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     exit;
 }
 
-        // Log aktiviti
-        $stmt = $pdo->prepare("
-            INSERT INTO log_aktiviti (user_id, aktiviti, ip_address)
-            VALUES (?, ?, ?)
-        ");
-        $stmt->execute([$admin_id, "Meluluskan tempahan #$tempahan_id (Lot: $no_lot)", $_SERVER['REMOTE_ADDR']]);
-
-        // Notifikasi kepada waris
-        $stmt = $pdo->prepare("SELECT user_id FROM tempahan WHERE id = ?");
-        $stmt->execute([$tempahan_id]);
-        $waris_id = $stmt->fetchColumn();
-        if ($waris_id) {
-            $stmt = $pdo->prepare("
-                INSERT INTO notifikasi (user_id, mesej)
-                VALUES (?, ?)
-            ");
-            $msg = "Permohonan tempahan #$tempahan_id anda telah DILULUSKAN. Lot yang ditetapkan: $no_lot.";
-            $stmt->execute([$waris_id, $msg]);
-        }
-
-        header("Location: admin_dashboard.php?berjaya=lulus");
-        exit;
-    }
-
     if ($action === 'tolak' && $tempahan_id) {
         $sebab_pilihan = $_POST['sebab_pilihan'] ?? '';
         $sebab_lain    = trim($_POST['sebab_lain'] ?? '');
         $ulasan_final  = $sebab_pilihan === 'Lain-lain' ? $sebab_lain : $sebab_pilihan;
+
+        // Ambil jumlah bayaran untuk proses auto-refund sebelum dipadam
+        $stmt_get_pay = $pdo->prepare("SELECT jumlah FROM bayaran WHERE tempahan_id = ?");
+        $stmt_get_pay->execute([$tempahan_id]);
+        $jumlah_bayar = $stmt_get_pay->fetchColumn();
+        
+        $refund_note = "";
+        $log_aktiviti_msg = "Menolak tempahan #$tempahan_id. Sebab: $ulasan_final";
+        
+        if ($jumlah_bayar && floatval($jumlah_bayar) > 0) {
+            // Padam rekod bayaran (Simulasi Auto Refund)
+            $stmt_del_pay = $pdo->prepare("DELETE FROM bayaran WHERE tempahan_id = ?");
+            $stmt_del_pay->execute([$tempahan_id]);
+            
+            $refund_note = " Bayaran RM " . number_format($jumlah_bayar, 2) . " telah dikembalikan secara automatik (auto-refund) ke akaun anda.";
+            $log_aktiviti_msg .= " (Yuran RM " . number_format($jumlah_bayar, 2) . " di-refund secara automatik)";
+        }
 
         $stmt = $pdo->prepare("
             UPDATE tempahan
@@ -110,7 +103,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             INSERT INTO log_aktiviti (user_id, aktiviti, ip_address)
             VALUES (?, ?, ?)
         ");
-        $stmt->execute([$admin_id, "Menolak tempahan #$tempahan_id. Sebab: $ulasan_final", $_SERVER['REMOTE_ADDR']]);
+        $stmt->execute([$admin_id, $log_aktiviti_msg, $_SERVER['REMOTE_ADDR']]);
 
         // Notifikasi waris
         $stmt = $pdo->prepare("SELECT user_id FROM tempahan WHERE id = ?");
@@ -120,13 +113,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt = $pdo->prepare("
                 INSERT INTO notifikasi (user_id, mesej) VALUES (?, ?)
             ");
-            $msg = "Permohonan tempahan #$tempahan_id anda telah DITOLAK. Sebab: $ulasan_final.";
+            $msg = "Permohonan tempahan #$tempahan_id anda telah DITOLAK. Sebab: $ulasan_final." . $refund_note;
             $stmt->execute([$waris_id, $msg]);
         }
 
         header("Location: admin_dashboard.php?berjaya=tolak&tempahan_id=$tempahan_id");
         exit;
     }
+}
 
 
 // ---------------------------------------------------------------
@@ -141,7 +135,7 @@ $lotTersedia = max(0, $lotJumlah - $lotPenuh);
 
 $peratusGuna = round(($lotPenuh / $lotJumlah) * 100);
 
-$stmt = $pdo->query("SELECT COUNT(*) FROM tempahan WHERE status_proses = 'Bayaran Berjaya'");
+$stmt = $pdo->query("SELECT COUNT(*) FROM tempahan WHERE status_proses IN ('Pending', 'Bayaran Berjaya')");
 $tempahanPending = $stmt->fetchColumn();
 
 $stmt = $pdo->query("SELECT COUNT(*) FROM daftar_khairat WHERE status_yuran = 'Dibayar'");
@@ -162,17 +156,23 @@ $page   = max(1, (int)($_GET['page'] ?? 1));
 $perPage = 10;
 $offset  = ($page - 1) * $perPage;
 
-$whereClause = "WHERE NOT (t.status_proses IN ('Lulus', 'Tolak') AND t.updated_at < NOW() - INTERVAL '24 hours')";
+$whereClause = "WHERE NOT (t.status_proses = 'Tolak' AND t.updated_at < NOW() - INTERVAL '24 hours') AND NOT (t.status_proses = 'Lulus' AND lp.no_lot IS NOT NULL AND t.updated_at < NOW() - INTERVAL '24 hours')";
 $params      = [];
 if ($filter === 'pending') {
-    $whereClause = "WHERE t.status_proses = 'Pending' AND NOT (t.status_proses IN ('Lulus', 'Tolak') AND t.updated_at < NOW() - INTERVAL '24 hours')";
+    $whereClause = "WHERE t.status_proses IN ('Pending', 'Bayaran Berjaya')";
 } elseif ($filter === 'lulus') {
-    $whereClause = "WHERE t.status_proses = 'Lulus' AND t.updated_at >= NOW() - INTERVAL '24 hours'";
+    $whereClause = "WHERE t.status_proses = 'Lulus' AND (lp.no_lot IS NULL OR t.updated_at >= NOW() - INTERVAL '24 hours')";
 } elseif ($filter === 'tolak') {
     $whereClause = "WHERE t.status_proses = 'Tolak' AND t.updated_at >= NOW() - INTERVAL '24 hours'";
 }
 
-$stmtCount = $pdo->prepare("SELECT COUNT(*) FROM tempahan t $whereClause");
+$stmtCount = $pdo->prepare("
+    SELECT COUNT(*) 
+    FROM tempahan t
+    JOIN maklumat_jenazah j ON j.id = t.jenazah_id
+    LEFT JOIN lot_pusara lp ON lp.jenazah_id = j.id
+    $whereClause
+");
 $stmtCount->execute($params);
 $totalRows  = $stmtCount->fetchColumn();
 $totalPages = ceil($totalRows / $perPage);
@@ -706,6 +706,17 @@ require_once 'header.php';
                                         onclick="bukaModal('tolak', <?= htmlspecialchars(json_encode($row), ENT_QUOTES) ?>)">
                                         <i class="fas fa-xmark text-xs"></i>
                                     </button>
+                                    <?php endif; ?>
+
+                                    <?php if ($s === 'Lulus' && empty($row['lot_ditetapkan'])): ?>
+                                    <!-- Tetapkan Lot Semula -->
+                                    <a
+                                        href="susun_lot.php?tempahan_id=<?= $row['id'] ?>"
+                                        class="icon-btn flex items-center justify-center"
+                                        style="background: #f59e0b; color: white;"
+                                        title="Tetapkan Lot Kubur">
+                                        <i class="fas fa-location-dot text-xs"></i>
+                                    </a>
                                     <?php endif; ?>
                                 </div>
                             </td>

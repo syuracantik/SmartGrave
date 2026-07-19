@@ -4,7 +4,7 @@
       "content": {
         "parts": [
           {
-            "text": "\u003col class='list-decimal pl-5 space-y-3'\u003e\n    \u003cli\u003e\u003cstrong\u003eMemperkasa Program Khairat & Pengurusan Jangka Panjang:\u003c/strong\u003e Walaupun Lot Tersedia mencukupi untuk lebih 60 tahun, jumlah Ahli Khairat Aktif yang sangat rendah (7 orang) berbanding purata pengebumian bulanan menunjukkan potensi isu kelestarian dan pengurusan jangka panjang. Cadangkan kempen kesedaran aktif secara berkala kepada komuniti Bangi Lama untuk meningkatkan jumlah ahli khairat. Fokuskan kepada faedah menjadi ahli (contoh: proses pengebumian dipermudah, sumbangan kepada pengurusan kubur) dan libatkan pemimpin komuniti serta masjid/surau setempat. Ini akan memastikan dana yang mampan untuk penyelenggaraan dan perancangan masa depan, walaupun tiada tunggakan yuran buat masa ini.\u003c/li\u003e\n    \u003cli\u003e\u003cstrong\u003eOptimasi Penggunaan Lot & Kajian Semula Keperluan Tanah:\u003c/strong\u003e Dengan Purata Pengebumian Sebulan yang sangat rendah (0.58 lot/bulan) dan Jangkaan Tempoh Penuh Kubur yang sangat panjang (62.2 tahun), tidak ada keperluan mendesak untuk fasa tanah baru. Sebaliknya, fokus perlu diberikan kepada pengurusan dan optimasi lot sedia ada. Lakukan audit berkala ke atas lot yang telah digunakan untuk memastikan keadaannya terpelihara. Pada masa yang sama, mulakan kajian awal tentang polisi penggunaan lot secara berhemah dan mungkin pertimbangkan pilihan pengebumian bertingkat (jika sesuai dengan adat dan perundangan tempatan) untuk memanjangkan lagi jangka hayat tanah sedia ada, walaupun belum kritikal.\u003c/li\u003e\n    \u003cli\u003e\u003cstrong\u003ePembangunan Sistem SmartGrave Berorientasi Komuniti:\u003c/strong\u003e Dengan jumlah ahli khairat yang sedikit dan anggaran kematian yang sangat rendah, sistem SmartGrave boleh diperluaskan fungsinya melangkaui sekadar rekod pengebumian. Cadangkan penambahan modul untuk interaksi komuniti seperti maklumat sejarah pusara terkemuka, pautan ke perkhidmatan keagamaan (solat jenazah, tahlil), atau platform untuk sukarelawan penyelenggaraan kubur. Ini akan meningkatkan nilai SmartGrave kepada komuniti, menarik lebih ramai ahli dan pengguna, sekaligus memupuk rasa kepunyaan dan tanggungjawab bersama terhadap pengurusan tanah perkuburan.\u003c/li\u003e\n\u003c/ol\u003e"
+            "text": "\u003col class='list-decimal pl-5 space-y-3'\u003e\n    \u003cli\u003e\n        \u003cstrong\u003ePengukuhan Kewangan & Penglibatan Ahli:\u003c/strong\u003e Dengan hanya 13 ahli khairat aktif dan 1 tunggakan, terdapat potensi besar untuk meningkatkan pendapatan dan kelestarian jangka panjang. Cadangan adalah untuk melancarkan kempen kesedaran secara berkala yang menekankan kepentingan khairat dan sumbangan ahli dalam memastikan pengurusan pusara yang cekap. Fokuskan pada faedah langsung kepada keluarga ahli dan kelestarian tanah perkuburan. Pertimbangkan untuk menawarkan pilihan pembayaran yang fleksibel atau insentif kecil bagi ahli yang membayar yuran secara konsisten atau mendaftar ahli baru. Ini akan membantu mengurangkan tunggakan dan menarik lebih ramai ahli, terutamanya golongan muda dan keluarga baru di kawasan Bangi Lama, bagi memastikan dana yang mencukupi untuk penyelenggaraan dan pengembangan masa depan.\n    \u003c/li\u003e\n    \u003cli\u003e\n        \u003cstrong\u003ePerancangan Penggunaan Lot Jangka Panjang & Digitalisasi:\u003c/strong\u003e Dengan 431 lot tersedia dan jangkaan kubur penuh dalam 30.7 tahun, Bangi Lama mempunyai tempoh perancangan yang selesa. Cadangan adalah untuk memulakan fasa perancangan induk (masterplan) untuk penggunaan lot sedia ada secara lebih efisien dan teratur, termasuk zonifikasi mengikut kategori (contoh: keluarga, individu). Seiring dengan itu, laksanakan sistem digitalisasi penuh untuk pengurusan lot, termasuk peta interaktif yang menunjukkan lot yang tersedia, terisi, dan telah ditempah. Ini akan memudahkan proses pencarian dan pengagihan lot, mengurangkan kesilapan, dan menyediakan data yang lebih tepat untuk perancangan masa depan. Pertimbangkan juga untuk mempromosikan pilihan pengebumian yang lebih padat (jika sesuai dengan adat dan syariat) untuk memanjangkan lagi jangka hayat tanah perkuburan.\n    \u003c/li\u003e\n    \u003cli\u003e\n        \u003cstrong\u003ePeningkatan Perkhidmatan & Komunikasi Komuniti:\u003c/strong\u003e Dengan purata pengebumian yang rendah (1.17 lot/bulan) dan anggaran kematian setahun (0.2 kes) yang menunjukkan komuniti kecil, adalah penting untuk membina hubungan yang kukuh dengan komuniti setempat. Cadangan adalah untuk meningkatkan perkhidmatan sedia ada dan komunikasi secara proaktif. Ini termasuk menyediakan maklumat yang jelas dan mudah diakses mengenai prosedur pengebumian, yuran, dan perkhidmatan tambahan (contoh: penyelenggaraan kubur, doa). Laksanakan platform komunikasi yang berkesan (contoh: kumpulan WhatsApp komuniti, papan kenyataan digital) untuk menyebarkan maklumat terkini, notis kematian, dan aktiviti khairat. Menganjurkan majlis atau aktiviti komuniti yang berkaitan dengan pengebumian dan pengurusan pusara (contoh: gotong-royong pembersihan kubur) boleh mengeratkan silaturahim dan meningkatkan kesedaran tentang peranan SmartGrave.\n    \u003c/li\u003e\n\u003c/ol\u003e"
           }
         ],
         "role": "model"
@@ -14,17 +14,17 @@
     }
   ],
   "usageMetadata": {
-    "promptTokenCount": 290,
-    "candidatesTokenCount": 502,
-    "totalTokenCount": 792,
+    "promptTokenCount": 291,
+    "candidatesTokenCount": 628,
+    "totalTokenCount": 919,
     "promptTokensDetails": [
       {
         "modality": "TEXT",
-        "tokenCount": 290
+        "tokenCount": 291
       }
     ],
     "serviceTier": "standard"
   },
   "modelVersion": "gemini-2.5-flash",
-  "responseId": "4VdDav1_y-WO4w_ymef4Cg"
+  "responseId": "6kBaarrJHtayjuMPu7OMmQY"
 }

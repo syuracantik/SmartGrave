@@ -92,7 +92,8 @@ try {
             m.nama_jenazah,
             m.no_ic,
             m.tarikh_wafat,
-            lp.no_lot
+            lp.no_lot,
+            lp.status_lot
         FROM tempahan t
         JOIN maklumat_jenazah m ON t.jenazah_id = m.id
         LEFT JOIN lot_pusara lp ON lp.jenazah_id = m.id
@@ -118,7 +119,7 @@ try {
         } elseif ($status_text == 'bayaran berjaya') {
             $status_kod = 2;
         } elseif ($status_text == 'lulus') {
-            if (!empty($app['no_lot'])) {
+            if (!empty($app['no_lot']) && ($app['status_lot'] ?? '') === 'Penuh') {
                 $status_kod = 4;
             } else {
                 $status_kod = 3;

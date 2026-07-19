@@ -60,6 +60,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 }
 
 // ── Normal page load ──────────────────────────────────────────────────────────
+$sort = $_GET['sort'] ?? 'latest';
+$order_by = "dk.created_at DESC";
+if ($sort === 'abjad') {
+    $order_by = "dk.nama_ahli ASC";
+} elseif ($sort === 'lama') {
+    $order_by = "dk.created_at ASC";
+}
+
 try {
     // Check if member has passed away by checking if their IC exists in maklumat_jenazah table (ignoring dashes)
     $query = "
@@ -69,7 +77,7 @@ try {
                    WHERE REPLACE(mj.no_ic, '-', '') = REPLACE(dk.no_ic, '-', '')
                ) AS telah_meninggal
         FROM daftar_khairat dk
-        ORDER BY dk.created_at DESC
+        ORDER BY $order_by
     ";
     $stmt  = $pdo->prepare($query);
     $stmt->execute();
@@ -319,6 +327,12 @@ tbody tr:hover{
                     <option value="">Semua Status</option>
                     <option value="Dibayar">Dibayar</option>
                     <option value="Tunggakan">Tunggakan</option>
+                </select>
+                <select id="sortFilter" onchange="doSort()"
+                    class="bg-white border border-gray-200 rounded-lg py-2.5 px-3 text-sm text-gray-600 shadow-sm cursor-pointer focus:outline-none focus:border-blue-500">
+                    <option value="latest" <?php echo $sort === 'latest' ? 'selected' : ''; ?>>Paling Terbaru</option>
+                    <option value="lama" <?php echo $sort === 'lama' ? 'selected' : ''; ?>>Paling Lama</option>
+                    <option value="abjad" <?php echo $sort === 'abjad' ? 'selected' : ''; ?>>Ikut Abjad (A-Z)</option>
                 </select>
                 <span class="text-sm text-gray-400 mono">
                     Papar: <span id="showCount" class="font-700 text-gray-700"><?php echo count($ahli_khairat); ?></span> rekod
@@ -652,6 +666,13 @@ function clearHighlight(el) {
     if (!el) return;
     const original = el.getAttribute('data-original');
     if (original) { el.textContent = original; el.removeAttribute('data-original'); }
+}
+
+function doSort() {
+    const val = document.getElementById('sortFilter').value;
+    const url = new URL(window.location.href);
+    url.searchParams.set('sort', val);
+    window.location.href = url.toString();
 }
 
 // ── Edit Modal ─────────────────────────────────────────────────────────────────

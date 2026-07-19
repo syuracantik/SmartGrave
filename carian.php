@@ -31,15 +31,19 @@ try {
             $pdo->exec("ALTER TABLE lot_pusara ADD COLUMN IF NOT EXISTS gambar_kiri_desc VARCHAR(255)");
             $pdo->exec("ALTER TABLE lot_pusara ADD COLUMN IF NOT EXISTS gambar_kanan_desc VARCHAR(255)");
             $pdo->exec("ALTER TABLE lot_pusara ADD COLUMN IF NOT EXISTS gambar_penanda_desc VARCHAR(255)");
+            
+            // Kemas kini check constraint status_lot untuk membenarkan status Mendap dan Tidak Sesuai
+            $pdo->exec("ALTER TABLE lot_pusara DROP CONSTRAINT IF EXISTS lot_pusara_status_lot_check");
+            $pdo->exec("ALTER TABLE lot_pusara ADD CONSTRAINT lot_pusara_status_lot_check CHECK (status_lot IN ('Tersedia', 'Ditetapkan', 'Penuh', 'Mendap', 'Tidak Sesuai'))");
         } catch (Exception $ex) {}
 
         $stmt = $pdo->query("
-            SELECT lp.no_lot AS id, j.nama_jenazah AS nama, j.no_ic AS ic, j.tarikh_wafat AS mati,
+            SELECT lp.no_lot AS id, lp.status_lot, j.nama_jenazah AS nama, j.no_ic AS ic, j.tarikh_wafat AS mati,
                    lp.gambar_kiri, lp.gambar_kanan, lp.gambar_penanda,
                    lp.gambar_kiri_desc, lp.gambar_kanan_desc, lp.gambar_penanda_desc
             FROM lot_pusara lp
             JOIN maklumat_jenazah j ON lp.jenazah_id = j.id
-            WHERE lp.status_lot = 'Penuh'
+            WHERE lp.status_lot IN ('Penuh', 'Ditetapkan')
         ");
         if ($stmt) {
             $db_graves = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -60,6 +64,7 @@ try {
                 }
                 $graves_map[$id] = [
                     'id' => $id,
+                    'status_lot' => $g['status_lot'],
                     'nama' => $g['nama'],
                     'ic' => $g['ic'],
                     'lahir' => $lahir,
@@ -72,6 +77,14 @@ try {
                     'gambar_kanan_desc' => $g['gambar_kanan_desc'] ?? '',
                     'gambar_penanda_desc' => $g['gambar_penanda_desc'] ?? ''
                 ];
+            }
+        }
+        
+        $all_lots_status = [];
+        $q_status = $pdo->query("SELECT no_lot, status_lot FROM lot_pusara");
+        if ($q_status) {
+            while($r = $q_status->fetch(PDO::FETCH_ASSOC)) {
+                $all_lots_status[$r['no_lot']] = $r['status_lot'];
             }
         }
     }
@@ -319,6 +332,11 @@ header::after{
   background:linear-gradient(135deg,var(--purple-l) 0%,#ede9fe 100%);
   color:var(--purple);border-color:rgba(109,40,217,0.25)!important;
   box-shadow:0 2px 8px rgba(109,40,217,0.1),inset 0 1px 0 rgba(255,255,255,0.7);
+}
+.pill.active-c{
+  background:linear-gradient(135deg,#fff1f2 0%,#ffe4e6 100%);
+  color:#e11d48;border-color:rgba(225,29,72,0.25)!important;
+  box-shadow:0 2px 8px rgba(225,29,72,0.1),inset 0 1px 0 rgba(255,255,255,0.7);
 }
 
 /* GPS badge */
@@ -809,9 +827,13 @@ header::after{
 <body>
 
 <header>
-  <a href="#" class="logo">
+  <a href="index.php" class="logo">
     <div class="logo-icon">🕌</div>
     <div class="logo-text">Smart<em>Grave</em></div>
+  </a>
+  <div class="h-sep"></div>
+  <a href="index.php" style="color: rgba(255,255,255,0.75); text-decoration: none; font-size: 11.5px; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; background: rgba(255,255,255,0.08); border-radius: var(--radius-sm); border: 1px solid rgba(255,255,255,0.12); transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.15)'; this.style.color='#fff';" onmouseout="this.style.background='rgba(255,255,255,0.08)'; this.style.color='rgba(255,255,255,0.75)';">
+    <i class="fas fa-arrow-left"></i> Kembali ke Utama
   </a>
   <div class="h-sep"></div>
   <div class="h-badge"><i class="fas fa-location-dot" style="font-size:10px;opacity:.8"></i> Masjid Kariah Bangi</div>
@@ -839,11 +861,11 @@ header::after{
         <button class="pill active-all" id="pill-all" onclick="setZone('all')">Semua</button>
         <button class="pill" id="pill-A" onclick="setZone('A')">Zon A</button>
         <button class="pill" id="pill-B" onclick="setZone('B')">Zon B</button>
+        <button class="pill" id="pill-C" onclick="setZone('C')">Zon C</button>
       </div>
       <div class="gps-badge">
         <div class="gps-dot"></div>
         <span id="gpsStatus" style="font-size: 10px;">Mendapatkan lokasi...</span>
-        <button class="sim-btn" id="simBtn" onclick="toggleGPSSimulation()">Simulasi GPS</button>
         <span id="userDistBadge"></span>
       </div>
     </div>
@@ -890,11 +912,13 @@ header::after{
 
     <div class="legend">
       <div class="leg-ttl">Petunjuk</div>
-      <div class="leg-item"><div class="ld" style="background:rgba(37,99,235,.12);border:1.5px solid #2563eb"></div>Zon A</div>
-      <div class="leg-item"><div class="ld" style="background:rgba(124,58,237,.12);border:1.5px solid #7c3aed"></div>Zon B</div>
+      <div class="leg-item"><div class="ld" style="background:rgba(37,99,235,.12);border:1.5px solid #2563eb"></div>Zon A (Dewasa)</div>
+      <div class="leg-item"><div class="ld" style="background:rgba(124,58,237,.12);border:1.5px solid #7c3aed"></div>Zon B (Dewasa)</div>
+      <div class="leg-item"><div class="ld" style="background:rgba(13,148,136,.12);border:1.5px solid #0d9488"></div>Zon C (Kanak-Kanak)</div>
       <div class="leg-sep"></div>
-      <div class="leg-item"><div class="ld" style="background:#f0f4f0;border:1px solid #9ca3af"></div>Kosong</div>
-      <div class="leg-item"><div class="ld" style="background:#fde8e8;border:1px solid #dc2626"></div>Terisi</div>
+      <div class="leg-item"><div class="ld" style="background:#fef08a;border:1px solid #d97706"></div>Ditetapkan</div>
+      <div class="leg-item"><div class="ld" style="background:#fde8e8;border:1px solid #dc2626"></div>Dikebumikan</div>
+      <div class="leg-item"><div class="ld" style="background:#3f3f46;border:1px solid #000000"></div>Tanah Rosak (Tidak Sesuai)</div>
       <div class="leg-sep"></div>
       <div class="leg-item">🌳 Pokok</div>
       <div class="leg-item">🕌 Masjid</div>
@@ -944,11 +968,12 @@ header::after{
 <script>
 // ── GRAVE DATA ──
 const GRAVES = <?php echo json_encode($final_graves); ?>;
+const ALL_LOT_STATUS = <?php echo json_encode($all_lots_status ?? []); ?>;
 
 // ── MAP SETUP ──
-const MASJID_POS  = [2.90050, 101.77336];
-const CENTER      = [2.89980, 101.77490];
-const ENTRY_GATE  = [2.89992, 101.77490];
+const MASJID_POS  = [2.90061, 101.78549];
+const CENTER      = [2.89966, 101.77551];
+const ENTRY_GATE  = [2.90016, 101.77551];
 
 const map = L.map('map',{center:CENTER, zoom:19, zoomControl:false, attributionControl:false});
 
@@ -987,23 +1012,20 @@ map.on('mousemove',e=>{
 });
 
 // ── LOT LAYOUT ──
-// Lot dimensions (metres approx): W≈6.1m, H≈8.9m, gapX≈2.2m, gapY≈1.8m
-const LOT_W  = 0.000055;
-const LOT_H  = 0.000080;
-const GAP_X  = 0.000020;
-const GAP_Y  = 0.000016;
-const STEP_X = LOT_W + GAP_X;  // 0.000075 per column
-const STEP_Y = LOT_H + GAP_Y;  // 0.000096 per row
-const ZONE_COLS = 11;           // columns per zone  → zone width ≈91m
-const ZONE_ROWS = 20;           // rows per zone     → zone height ≈213m
-// Total lots: 11 × 20 × 2 zones = 440
+const LOT_W  = 0.000025;
+const LOT_H  = 0.000042;
+const GAP_X  = 0.000008;
+const GAP_Y  = 0.000008;
+const STEP_X = LOT_W + GAP_X;  // 0.000033 per column
+const STEP_Y = LOT_H + GAP_Y;  // 0.000050 per row
+const ZONE_COLS = 11;
+const ZONE_ROWS = 20;
 
 // ── ZONE STARTS (kawasan lapang barat masjid) ──
-// Zone A kiri koridor, Zone B kanan koridor (gap ~44m)
-// Lot membesar ke utara (lat meningkat) dari sempadan selatan
 const ZONE_START = {
-  A: {lat: 2.89800, lng: 101.77400},
-  B: {lat: 2.89800, lng: 101.774975},
+  A: {lat: 2.89916, lng: 101.77510},
+  B: {lat: 2.89916, lng: 101.77556},
+  C: {lat: 2.89992, lng: 101.77556}, // Zon C di atas Zon B
 };
 
 const LOT_COORDS = {};
@@ -1019,22 +1041,27 @@ function seededRandom(seed) {
 }
 
 // ── GENERATE ALL LOTS — grid + jitter terhad ──
-// Jitter max ±GAP*0.3 → dijamin tidak bertindih:
-//   X: min sep = STEP_X − 2×(GAP_X×0.3) = 0.000063 > LOT_W 0.000055 ✓
-//   Y: min sep = STEP_Y − 2×(GAP_Y×0.3) = 0.000086 > LOT_H 0.000080 ✓
 function generateLots(zon) {
   const coords = {};
   const s = ZONE_START[zon];
-  const rnd = seededRandom(zon === 'A' ? 31 : 67);
+  const rnd = seededRandom(zon === 'A' ? 31 : (zon === 'B' ? 67 : 89));
   let n = 1;
-  for (let r = 0; r < ZONE_ROWS; r++) {
-    for (let c = 0; c < ZONE_COLS; c++) {
+  const rows = zon === 'C' ? 5 : (zon === 'B' ? 15 : ZONE_ROWS);
+  const cols = zon === 'C' ? 17 : ZONE_COLS;
+  const step_x = zon === 'C' ? 0.000021 : STEP_X;
+  const step_y = zon === 'C' ? 0.000033 : STEP_Y;
+  const lot_w = zon === 'C' ? 0.000016 : LOT_W;
+  const lot_h = zon === 'C' ? 0.000028 : LOT_H;
+  const gap_x = zon === 'C' ? 0.000005 : GAP_X;
+  const gap_y = zon === 'C' ? 0.000005 : GAP_Y;
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
       const id = `${zon}${String(n).padStart(3,'0')}`;
-      const jx = (rnd() - 0.5) * GAP_X * 0.6;   // ±0.000006 max
-      const jy = (rnd() - 0.5) * GAP_Y * 0.6;   // ±0.000005 max
+      const jx = (rnd() - 0.5) * gap_x * 0.6;
+      const jy = (rnd() - 0.5) * gap_y * 0.6;
       coords[id] = [
-        s.lat + r * STEP_Y + LOT_H / 2 + jy,
-        s.lng + c * STEP_X + LOT_W / 2 + jx,
+        s.lat + r * step_y + lot_h / 2 + jy,
+        s.lng + c * step_x + lot_w / 2 + jx,
       ];
       n++;
     }
@@ -1044,7 +1071,8 @@ function generateLots(zon) {
 
 const ZONE_A_COORDS = generateLots('A');
 const ZONE_B_COORDS = generateLots('B');
-Object.assign(LOT_COORDS, ZONE_A_COORDS, ZONE_B_COORDS);
+const ZONE_C_COORDS = generateLots('C');
+Object.assign(LOT_COORDS, ZONE_A_COORDS, ZONE_B_COORDS, ZONE_C_COORDS);
 
 GRAVES.forEach(g => {
   if (LOT_COORDS[g.id]) {
@@ -1055,16 +1083,17 @@ GRAVES.forEach(g => {
 
 // ── ZONE BOUNDARY & LOTS ──
 const ZONE_CFG = {
-  A:{color:'#2563eb',fill:'rgba(37,99,235,.04)',label:'ZON A'},
-  B:{color:'#7c3aed',fill:'rgba(124,58,237,.04)',label:'ZON B'},
+  A:{color:'#2563eb',fill:'rgba(37,99,235,.04)',label:'ZON A (DEWASA)'},
+  B:{color:'#7c3aed',fill:'rgba(124,58,237,.04)',label:'ZON B (DEWASA)'},
+  C:{color:'#0d9488',fill:'rgba(13,148,136,.04)',label:'ZON C (KANAK-KANAK)'},
 };
 
 function drawZoneBoundary(zon) {
   const cfg = ZONE_CFG[zon];
   const s = ZONE_START[zon];
   const totalW = ZONE_COLS * STEP_X;
-  const totalH = ZONE_ROWS * STEP_Y;
-  const pad = 0.00005;
+  const totalH = zon === 'C' ? 5 * 0.000033 : (zon === 'B' ? 15 * STEP_Y : ZONE_ROWS * STEP_Y);
+  const pad = 0.00003;
 
   L.rectangle([
     [s.lat - pad, s.lng - pad],
@@ -1074,9 +1103,10 @@ function drawZoneBoundary(zon) {
     fill:true,fillColor:cfg.fill,fillOpacity:1,opacity:.5
   }).addTo(map);
 
-  // Label di bahagian selatan zon supaya tidak menindih pintu masuk
+  // Label: Letak label C di utara (atas) dan label B di selatan (bawah) supaya tidak bertindih
+  const labelLat = zon === 'C' ? s.lat + totalH + 0.00006 : s.lat - 0.00008;
   L.marker(
-    [s.lat - 0.00010, s.lng + totalW / 2],
+    [labelLat, s.lng + totalW / 2],
     {icon:L.divIcon({
       html:`<div style="
         background:white;color:${cfg.color};
@@ -1093,35 +1123,33 @@ function drawZoneBoundary(zon) {
 
 // ── LANDMARKS ──
 function drawLandmarks() {
-  // Koridor tengah antara Zon A dan Zon B
+  // Koridor tengah antara Zon A dan Zon B/C
   const corridorLng = (ZONE_START.A.lng + ZONE_COLS * STEP_X + ZONE_START.B.lng) / 2;
   const pathPts = [
     ENTRY_GATE,
     [ZONE_START.A.lat, corridorLng],
   ];
 
-  // Bayang koridor
-  L.polyline(pathPts,{color:'#d97706',weight:14,opacity:.15,lineCap:'round'}).addTo(map);
-  // Garisan dash koridor
-  L.polyline(pathPts,{color:'#d97706',weight:2,opacity:.55,dashArray:'9,7',lineCap:'round'}).addTo(map);
+  // Garisan dash koridor tunggal
+  L.polyline(pathPts,{color:'#d97706',weight:3,opacity:.7,dashArray:'7,5',lineCap:'round'}).addTo(map);
 
   [
     {lat:MASJID_POS[0],  lng:MASJID_POS[1],     icon:'🕌', label:'Masjid Kariah Bangi'},
-    {lat:2.90055,        lng:101.77308,         icon:'🅿️', label:'Tempat Letak Kereta'},
+    {lat:2.90025,        lng:101.77520,         icon:'🅿️', label:'Tempat Letak Kereta'},
     {lat:ENTRY_GATE[0],  lng:ENTRY_GATE[1],     icon:'🚪', label:'Pintu Masuk Utama'},
     // Water Hydrants (Pili Air) near the lots
-    {lat:2.89950,        lng:101.77485,         icon:'🚿', label:'Pili Air (Zon A - Utara)'},
-    {lat:2.89840,        lng:101.77485,         icon:'🚿', label:'Pili Air (Zon A - Selatan)'},
-    {lat:2.89950,        lng:101.77502,         icon:'🚿', label:'Pili Air (Zon B - Utara)'},
-    {lat:2.89840,        lng:101.77502,         icon:'🚿', label:'Pili Air (Zon B - Selatan)'},
+    {lat:2.89986,        lng:101.77507,         icon:'🚿', label:'Pili Air (Zon A - Barat)'},
+    {lat:2.89936,        lng:101.77507,         icon:'🚿', label:'Pili Air (Zon A - Barat)'},
+    {lat:2.89986,        lng:101.77589,         icon:'🚿', label:'Pili Air (Zon B - Timur)'},
+    {lat:2.89936,        lng:101.77589,         icon:'🚿', label:'Pili Air (Zon B - Timur)'},
     // Trees near the lots
-    {lat:2.89990,        lng:101.77390,         icon:'🌳', label:'Pokok (Barat Laut Zon A)'},
-    {lat:2.89800,        lng:101.77390,         icon:'🌳', label:'Pokok (Barat Daya Zon A)'},
-    {lat:2.89990,        lng:101.77590,         icon:'🌳', label:'Pokok (Timur Laut Zon B)'},
-    {lat:2.89800,        lng:101.77590,         icon:'🌳', label:'Pokok (Tenggara Zon B)'},
-    {lat:2.89900,        lng:101.77385,         icon:'🌳', label:'Pokok (Barat Zon A)'},
-    {lat:2.89900,        lng:101.77595,         icon:'🌳', label:'Pokok (Timur Zon B)'},
-    {lat:2.89875,        lng:101.77490,         icon:'🌳', label:'Pokok Besar (Koridor Tengah)'},
+    {lat:2.90016,        lng:101.77507,         icon:'🌳', label:'Pokok (Barat Laut Zon A)'},
+    {lat:2.89916,        lng:101.77507,         icon:'🌳', label:'Pokok (Barat Daya Zon A)'},
+    {lat:2.90016,        lng:101.77589,         icon:'🌳', label:'Pokok (Timur Laut Zon B/C)'},
+    {lat:2.89916,        lng:101.77589,         icon:'🌳', label:'Pokok (Tenggara Zon B)'},
+    {lat:2.89966,        lng:101.77507,         icon:'🌳', label:'Pokok (Barat Zon A)'},
+    {lat:2.89966,        lng:101.77589,         icon:'🌳', label:'Pokok (Timur Zon B)'},
+    {lat:2.89966,        lng:corridorLng,       icon:'🌳', label:'Pokok Besar (Koridor Tengah)'},
   ].forEach(lm=>{
     L.marker([lm.lat,lm.lng],{
       icon:L.divIcon({
@@ -1138,22 +1166,53 @@ function drawLandmarks() {
 function drawAllLots() {
   drawZoneBoundary('A');
   drawZoneBoundary('B');
+  drawZoneBoundary('C');
 
   Object.entries(LOT_COORDS).forEach(([id,coord]) => {
-    const occupied = GRAVES.some(g => g.id === id);
-    const zone = id.startsWith('A') ? 'A' : 'B';
+    const status = ALL_LOT_STATUS[id] || 'Tersedia';
+    const occupied = GRAVES.find(g => g.id === id);
+    const zone = id.startsWith('A') ? 'A' : (id.startsWith('B') ? 'B' : 'C');
     const cfg = ZONE_CFG[zone];
+    const lot_w = zone === 'C' ? 0.000016 : LOT_W;
+    const lot_h = zone === 'C' ? 0.000028 : LOT_H;
+
+    let lotColor = cfg.color;
+    let lotFill = cfg.color;
+    let lotOpacity = 0.08;
+    let tooltipText = `Lot ${id} (${cfg.label})<br><b>Kosong</b>`;
+
+    if (status === 'Penuh') {
+      lotColor = '#dc2626';
+      lotFill = '#fecaca';
+      lotOpacity = 0.35;
+      tooltipText = `Lot ${id}<br><b style="color:#dc2626">Dikebumikan ${occupied ? '(Arwah: ' + occupied.nama + ')' : ''}</b>`;
+    } else if (status === 'Ditetapkan') {
+      lotColor = '#d97706';
+      lotFill = '#fef08a';
+      lotOpacity = 0.35;
+      tooltipText = `Lot ${id}<br><b style="color:#d97706">Ditetapkan ${occupied ? '(Arwah: ' + occupied.nama + ')' : ''}</b>`;
+    } else if (status === 'Mendap') {
+      lotColor = '#000000';
+      lotFill = '#3f3f46';
+      lotOpacity = 0.85;
+      tooltipText = `Lot ${id}<br><b style="color:#ef4444">🚫 TIDAK BOLEH DIGUNAKAN (Tanah Mendap)</b>`;
+    } else if (status === 'Tidak Sesuai') {
+      lotColor = '#000000';
+      lotFill = '#3f3f46';
+      lotOpacity = 0.85;
+      tooltipText = `Lot ${id}<br><b style="color:#ef4444">🚫 KAWASAN TIDAK SESUAI (Berbatu/Keras)</b>`;
+    }
 
     L.rectangle([
-      [coord[0]-LOT_H/2, coord[1]-LOT_W/2],
-      [coord[0]+LOT_H/2, coord[1]+LOT_W/2]
+      [coord[0]-lot_h/2, coord[1]-lot_w/2],
+      [coord[0]+lot_h/2, coord[1]+lot_w/2]
     ],{
-      color: occupied ? '#dc2626' : cfg.color,
+      color: lotColor,
       weight: 1.2,
-      fillOpacity: occupied ? 0.18 : 0.08,
-      fillColor: occupied ? '#fecaca' : cfg.color,
+      fillOpacity: lotOpacity,
+      fillColor: lotFill,
     }).addTo(map)
-    .bindTooltip(`<div style="font-family:'Plus Jakarta Sans',sans-serif;font-size:11px;font-weight:700">Lot ${id}<br>${occupied?'Terisi':'Kosong'}</div>`,{direction:'top',offset:[0,-5]});
+    .bindTooltip(`<div style="font-family:'Plus Jakarta Sans',sans-serif;font-size:11px;font-weight:700">${tooltipText}</div>`,{direction:'top',offset:[0,-5]});
   });
 }
 
@@ -1214,7 +1273,7 @@ function updateDistances() {
 }
 
 let isSimulatingGPS = false;
-const SIMULATED_START = [2.90055, 101.77308]; // parking lot
+const SIMULATED_START = [2.90025, 101.77520]; // parking lot dekat kubur
 
 function toggleGPSSimulation() {
   const btn = document.getElementById('simBtn');
@@ -1363,8 +1422,11 @@ function startNav(id) {
   _navLineLayer=_arrowLayer=_walkMkr=_startMkr=_destMkr=null;
   if(_walkInterval){clearInterval(_walkInterval);_walkInterval=null;}
 
-  const row_gap_lat = d.lat - (LOT_H + GAP_Y) / 2;
-  const corridorLng = 101.77490;
+  const isC = d.id.startsWith('C');
+  const lot_h = isC ? 0.000028 : LOT_H;
+  const gap_y = isC ? 0.000005 : GAP_Y;
+  const row_gap_lat = d.lat - (lot_h + gap_y) / 2;
+  const corridorLng = (ZONE_START.A.lng + ZONE_COLS * STEP_X + ZONE_START.B.lng) / 2;
 
   const routePts = [
     ENTRY_GATE,
@@ -1397,45 +1459,67 @@ function startNav(id) {
 
   map.fitBounds(_navLineLayer.getBounds(),{padding:[80,80]});
 
-  const pt0=ENTRY_GATE;
-  const pt1=[row_gap_lat, corridorLng];
-  const pt2=[row_gap_lat, d.lng];
-  const pt3=[d.lat, d.lng];
+  // Calculate distance segments dynamically
+  let totalDist = 0;
+  const steps = [];
 
-  const dist0_1=Math.round(haversineMeters(pt0[0],pt0[1],pt1[0],pt1[1]));
-  const dist1_2=Math.round(haversineMeters(pt1[0],pt1[1],pt2[0],pt2[1]));
-  const dist2_3=Math.round(haversineMeters(pt2[0],pt2[1],pt3[0],pt3[1]));
+  const dist1 = Math.round(haversineMeters(ENTRY_GATE[0],ENTRY_GATE[1],row_gap_lat,corridorLng));
+  totalDist += dist1;
 
-  const totalDist=dist0_1+dist1_2+dist2_3;
-  const walkMins=Math.max(1,Math.ceil(totalDist/65));
-
-  const turnDir = d.lng < corridorLng ? 'kanan' : 'kiri';
-  const isA = d.zon === 'A';
-  const enterDir = isA ? 'kanan' : 'kiri';
-
-  // Calculate coordinates-like grave count
+  // Row calculation for display details
   const num_id = parseInt(d.id.substring(1), 10);
-  const col_idx = (num_id - 1) % ZONE_COLS;
-  const row_idx = Math.floor((num_id - 1) / ZONE_COLS);
-  
+  const z_cols = isC ? 17 : ZONE_COLS;
+  const col_idx = (num_id - 1) % z_cols;
+  const row_idx = Math.floor((num_id - 1) / z_cols);
+  const rows_total = isC ? 5 : (d.zon === 'B' ? 15 : ZONE_ROWS);
+
+  steps.push({
+    icon: '🚪',
+    act: 'Pintu Masuk Utama',
+    det: `Jalan terus ke Selatan melepasi ${rows_total - 1 - row_idx} baris kubur`,
+    dist: dist1 + ' m',
+    cls: 's-first'
+  });
+
+  const dist2 = Math.round(haversineMeters(row_gap_lat,corridorLng,row_gap_lat,d.lng));
+  totalDist += dist2;
+  const turnDir = d.lng < corridorLng ? 'kiri' : 'kanan';
   let num_lots_to_walk = 0;
-  let walk_direction_relative = "";
-  
-  if (isA) {
-      num_lots_to_walk = (ZONE_COLS - 1) - col_idx; // Walking West (relative right from South-facing corridor)
-      walk_direction_relative = "ke kanan (arah Barat)";
+  if (d.zon === 'A') {
+      num_lots_to_walk = (ZONE_COLS - 1) - col_idx;
   } else {
-      num_lots_to_walk = col_idx; // Walking East (relative left from South-facing corridor)
-      walk_direction_relative = "ke kiri (arah Timur)";
+      num_lots_to_walk = col_idx;
   }
 
-  const steps = [
-    {icon:'🚪',act:'Pintu Masuk Utama',det:'Titik permulaan antara Zon A dan Zon B',dist:'',cls:'s-first'},
-    {icon:'⬇️',act:'Koridor Tengah',det:`Jalan terus ke Selatan melepasi ${19 - row_idx} baris kubur`,dist:dist0_1+' m',cls:''},
-    {icon:turnDir==='kiri'?'⬅️':'➡️',act:`Lorong Barisan`,det:`Belok ${turnDir} melintasi ${num_lots_to_walk} lot kubur`,dist:dist1_2+' m',cls:''},
-    {icon:enterDir==='kanan'?'➡️':'⬅️',act:`Masuk ke Lot`,det:`Langkah ke lot destinasi di Barisan ke-${row_idx + 1}`,dist:dist2_3+' m',cls:''},
-    {icon:'📍',act:`Destinasi Tiba`,det:`Lot ${d.id} (${d.nama}) berada di hadapan anda`,dist:totalDist+' m',cls:'s-dest'}
-  ];
+  steps.push({
+    icon: turnDir==='kiri'?'⬅️':'➡️',
+    act: 'Belok ' + (turnDir === 'kiri' ? 'Kiri' : 'Kanan'),
+    det: `Belok masuk ke lorong barisan melintasi ${num_lots_to_walk} lot kubur`,
+    dist: dist2 + ' m',
+    cls: ''
+  });
+
+  const dist3 = Math.round(haversineMeters(row_gap_lat,d.lng,d.lat,d.lng));
+  totalDist += dist3;
+  const enterDir = d.zon === 'A' ? 'kanan' : 'kiri';
+
+  steps.push({
+    icon: enterDir==='kanan'?'➡️':'⬅️',
+    act: 'Masuk ke Lot',
+    det: `Langkah ke lot destinasi di Barisan ke-${row_idx + 1}`,
+    dist: dist3 + ' m',
+    cls: ''
+  });
+
+  steps.push({
+    icon: '📍',
+    act: 'Destinasi Tiba',
+    det: `Lot ${d.id} (${d.nama}) berada di hadapan anda`,
+    dist: totalDist + ' m',
+    cls: 's-dest'
+  });
+
+  const walkMins=Math.max(1,Math.ceil(totalDist/65));
 
   document.getElementById('navName').textContent=d.nama;
   document.getElementById('navTime').textContent=walkMins;
@@ -1556,7 +1640,8 @@ function setZone(z) {
   const p=document.getElementById(`pill-${z}`);
   if(z==='all') p.classList.add('active-all');
   else if(z==='A') p.classList.add('active-a');
-  else p.classList.add('active-b');
+  else if(z==='B') p.classList.add('active-b');
+  else p.classList.add('active-c');
   doSearch();
 }
 
