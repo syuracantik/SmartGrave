@@ -52,3 +52,26 @@
         </div>
     </div>
 </aside>
+
+<!-- Mobile Navigation Bar for Waris (Hanya kelihatan di telefon & tablet) -->
+<?php
+$current_page = basename($_SERVER['PHP_SELF']);
+?>
+<div class="lg:hidden fixed bottom-0 left-0 right-0 bg-emerald-950 text-white z-[2000] border-t border-emerald-800 flex justify-around items-center py-3 px-2 shadow-2xl">
+    <a href="waris_dashboard.php" class="flex flex-col items-center space-y-1 <?php echo ($current_page == 'waris_dashboard.php') ? 'text-yellow-400 font-bold' : 'text-emerald-300/70 hover:text-yellow-400'; ?> transition-colors">
+        <i class="fas fa-th-large text-lg"></i>
+        <span class="text-[9px] uppercase tracking-wider font-semibold">Dashboard</span>
+    </a>
+    <a href="booking.php" class="flex flex-col items-center space-y-1 <?php echo ($current_page == 'booking.php') ? 'text-yellow-400 font-bold' : 'text-emerald-300/70 hover:text-yellow-400'; ?> transition-colors">
+        <i class="fas fa-file-contract text-lg"></i>
+        <span class="text-[9px] uppercase tracking-wider font-semibold">Tempah Lot</span>
+    </a>
+    <a href="daftar_khairat.php" class="flex flex-col items-center space-y-1 <?php echo ($current_page == 'daftar_khairat.php') ? 'text-yellow-400 font-bold' : 'text-emerald-300/70 hover:text-yellow-400'; ?> transition-colors">
+        <i class="fas fa-user-plus text-lg"></i>
+        <span class="text-[9px] uppercase tracking-wider font-semibold">Khairat</span>
+    </a>
+    <a href="index.php" class="flex flex-col items-center space-y-1 text-rose-300 hover:text-rose-400 transition-colors">
+        <i class="fas fa-sign-out-alt text-lg"></i>
+        <span class="text-[9px] uppercase tracking-wider font-semibold">Keluar</span>
+    </a>
+</div>

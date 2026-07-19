@@ -55,3 +55,30 @@
         </div>
     </div>
 </aside>
+
+<!-- Mobile Navigation Bar for Admin (Hanya kelihatan di telefon & tablet) -->
+<?php
+$current_page = basename($_SERVER['PHP_SELF']);
+?>
+<div class="lg:hidden fixed bottom-0 left-0 right-0 bg-emerald-950 text-white z-[2000] border-t border-emerald-800 flex justify-around items-center py-3 px-1 shadow-2xl">
+    <a href="admin_dashboard.php" class="flex flex-col items-center space-y-1 <?php echo ($current_page == 'admin_dashboard.php') ? 'text-yellow-400 font-bold' : 'text-emerald-300/70 hover:text-yellow-400'; ?> transition-colors">
+        <i class="fas fa-th-large text-lg"></i>
+        <span class="text-[8px] uppercase tracking-wider font-semibold">Dashboard</span>
+    </a>
+    <a href="susun_lot.php" class="flex flex-col items-center space-y-1 <?php echo ($current_page == 'susun_lot.php') ? 'text-yellow-400 font-bold' : 'text-emerald-300/70 hover:text-yellow-400'; ?> transition-colors">
+        <i class="fas fa-layer-group text-lg"></i>
+        <span class="text-[8px] uppercase tracking-wider font-semibold">Susun Lot</span>
+    </a>
+    <a href="data_khairat.php" class="flex flex-col items-center space-y-1 <?php echo ($current_page == 'data_khairat.php') ? 'text-yellow-400 font-bold' : 'text-emerald-300/70 hover:text-yellow-400'; ?> transition-colors">
+        <i class="fas fa-users text-lg"></i>
+        <span class="text-[8px] uppercase tracking-wider font-semibold">Khairat</span>
+    </a>
+    <a href="laporan.php" class="flex flex-col items-center space-y-1 <?php echo ($current_page == 'laporan.php') ? 'text-yellow-400 font-bold' : 'text-emerald-300/70 hover:text-yellow-400'; ?> transition-colors">
+        <i class="fas fa-chart-line text-lg"></i>
+        <span class="text-[8px] uppercase tracking-wider font-semibold">Laporan</span>
+    </a>
+    <a href="index.php" class="flex flex-col items-center space-y-1 text-rose-300 hover:text-rose-400 transition-colors">
+        <i class="fas fa-sign-out-alt text-lg"></i>
+        <span class="text-[8px] uppercase tracking-wider font-semibold">Keluar</span>
+    </a>
+</div>

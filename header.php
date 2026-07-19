@@ -26,6 +26,11 @@
             opacity: 1 !important;
             transform: translateY(0) scale(1) !important;
         }
+        @media (max-width: 1024px) {
+            main {
+                padding-bottom: 5.5rem !important;
+            }
+        }
     </style>
     <!-- AI Chatbot Assistant -->
     <script src="chatbot.js?v=<?= time() ?>" defer></script>
