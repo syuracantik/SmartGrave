@@ -48,12 +48,12 @@ try {
 <body class="islamic-pattern font-sans text-gray-800">
 
     <nav class="bg-white/90 backdrop-blur-md sticky top-0 z-50 border-b border-emerald-100">
-        <div class="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
-            <div class="flex items-center space-x-3">
-                <div class="bg-emerald-800 p-2 rounded-xl text-yellow-400">
-                    <i class="fas fa-mosque"></i>
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-4 flex justify-between items-center">
+            <div class="flex items-center space-x-2 sm:space-x-3">
+                <div class="bg-emerald-800 p-1.5 sm:p-2 rounded-xl text-yellow-400">
+                    <i class="fas fa-mosque text-sm sm:text-base"></i>
                 </div>
-                <span class="text-2xl font-bold text-emerald-900 tracking-tight">Smart<span class="text-emerald-600">Grave</span></span>
+                <span class="text-lg sm:text-2xl font-bold text-emerald-900 tracking-tight">Smart<span class="text-emerald-600">Grave</span></span>
             </div>
             <div class="hidden md:flex space-x-8 font-medium text-emerald-900">
                 <a href="index.php" class="text-emerald-600 font-bold">Laman Utama</a>
@@ -61,29 +61,29 @@ try {
                 <a href="login.php" class="hover:text-emerald-600 transition">Permohonan Lot</a>
                 <a href="login.php" class="hover:text-emerald-600 transition">Daftar Khairat</a>
             </div>
-            <div class="flex items-center space-x-4">
-                <a href="login.php" class="text-emerald-800 font-semibold hover:text-emerald-600 transition">Log Masuk</a>
-                <a href="signup.php" class="bg-emerald-800 text-white px-6 py-2.5 rounded-full font-semibold hover:bg-emerald-700 transition shadow-lg shadow-emerald-200">Daftar Masuk</a>
+            <div class="flex items-center space-x-2 sm:space-x-4">
+                <a href="login.php" class="text-emerald-800 text-xs sm:text-base font-semibold hover:text-emerald-600 transition">Log Masuk</a>
+                <a href="signup.php" class="bg-emerald-800 text-white px-4 sm:px-6 py-2 sm:py-2.5 rounded-full text-xs sm:text-base font-semibold hover:bg-emerald-700 transition shadow-lg shadow-emerald-200">Daftar<span class="hidden sm:inline"> Masuk</span></a>
             </div>
         </div>
     </nav>
 
-    <header class="hero-gradient h-[600px] flex items-center justify-center text-center text-white px-4">
+    <header class="hero-gradient min-h-[500px] md:h-[600px] py-12 md:py-0 flex items-center justify-center text-center text-white px-4">
         <div class="max-w-4xl">
-            <div class="inline-block bg-emerald-700/50 px-4 py-1 rounded-full text-emerald-200 text-sm font-bold mb-6 tracking-widest uppercase">
+            <div class="inline-block bg-emerald-700/50 px-4 py-1.5 rounded-full text-emerald-200 text-xs sm:text-sm font-bold mb-6 tracking-widest uppercase">
                 Khusus Untuk Penduduk Bangi Lama
             </div>
-            <h1 class="text-5xl md:text-7xl font-bold mb-6">Satu Sistem, Urusan Pusara Lebih Teratur</h1>
-            <p class="text-xl mb-10 text-emerald-50 leading-relaxed max-w-2xl mx-auto">
+            <h1 class="text-3xl sm:text-5xl md:text-7xl font-bold mb-6">Satu Sistem, Urusan Pusara Lebih Teratur</h1>
+            <p class="text-sm sm:text-base md:text-xl mb-8 md:mb-10 text-emerald-50 leading-relaxed max-w-2xl mx-auto">
                 Platform digital untuk carian pusara, navigasi ke lokasi kubur, dan pengurusan tempahan lot perkuburan di Masjid Kariah Bangi
             </p>
             
-            <form action="carian.php" method="GET" id="carian" class="bg-white p-3 rounded-2xl shadow-2xl flex flex-col md:flex-row gap-3">
+            <form action="carian.php" method="GET" id="carian" class="bg-white p-2 sm:p-3 rounded-2xl shadow-2xl flex flex-col md:flex-row gap-3">
                 <div class="flex-1 relative">
                     <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
-                    <input type="text" name="query" placeholder="Masukkan No. Kad Pengenalan atau Nama Arwah..." class="w-full pl-12 pr-4 py-4 rounded-xl text-gray-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 border border-gray-100" required>
+                    <input type="text" name="query" placeholder="No. Kad Pengenalan atau Nama Arwah..." class="w-full pl-10 sm:pl-12 pr-4 py-3 sm:py-4 rounded-xl text-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 border border-gray-100" required>
                 </div>
-                <button type="submit" class="bg-emerald-600 text-white px-10 py-4 rounded-xl font-bold hover:bg-emerald-500 transition-all shadow-lg">
+                <button type="submit" class="bg-emerald-600 text-white px-6 sm:px-10 py-3 sm:py-4 rounded-xl font-bold hover:bg-emerald-500 transition-all shadow-lg text-sm">
                     Cari Lokasi Pusara
                 </button>
             </form>
@@ -162,36 +162,36 @@ try {
     </section>
 
     <section id="khairat" class="max-w-5xl mx-auto pb-24 px-6">
-        <div class="bg-emerald-900 rounded-[40px] shadow-2xl overflow-hidden flex flex-col md:flex-row border-4 border-emerald-800">
-            <div class="p-12 md:w-1/2 text-white bg-emerald-800/50">
-                <h3 class="text-3xl font-bold mb-6 italic">Keahlian Khairat Kematian</h3>
-                <p class="text-emerald-100 mb-8 leading-relaxed">Pendaftaran keahlian sangat digalakkan bagi meringankan beban kos pengebumian di masa hadapan.</p>
+        <div class="bg-emerald-900 rounded-[24px] sm:rounded-[40px] shadow-2xl overflow-hidden flex flex-col md:flex-row border-4 border-emerald-800">
+            <div class="p-6 sm:p-8 md:p-12 md:w-1/2 text-white bg-emerald-800/50">
+                <h3 class="text-2xl sm:text-3xl font-bold mb-6 italic">Keahlian Khairat Kematian</h3>
+                <p class="text-emerald-100 mb-8 leading-relaxed text-sm sm:text-base">Pendaftaran keahlian sangat digalakkan bagi meringankan beban kos pengebumian di masa hadapan.</p>
                 <div class="space-y-4">
-                    <div class="flex items-center space-x-3">
+                    <div class="flex items-center space-x-3 text-sm">
                         <i class="fas fa-check-circle text-yellow-400"></i>
                         <span>Pengebumian Percuma (Untuk Ahli)</span>
                     </div>
-                    <div class="flex items-center space-x-3">
+                    <div class="flex items-center space-x-3 text-sm">
                         <i class="fas fa-check-circle text-yellow-400"></i>
                         <span>Urusan Mandi & Kafan Lengkap</span>
                     </div>
-                    <div class="flex items-center space-x-3">
+                    <div class="flex items-center space-x-3 text-sm">
                         <i class="fas fa-check-circle text-yellow-400"></i>
                         <span>Van Jenazah Disediakan</span>
                     </div>
                 </div>
-                <a href="login.php" class="inline-block mt-10 bg-yellow-500 text-emerald-950 px-8 py-3 rounded-full font-black hover:bg-yellow-400 transition-all uppercase tracking-wider text-sm">
+                <a href="login.php" class="inline-block mt-8 md:mt-10 bg-yellow-500 text-emerald-950 px-6 sm:px-8 py-3 rounded-full font-black hover:bg-yellow-400 transition-all uppercase tracking-wider text-xs sm:text-sm">
                     Daftar Ahli Sekarang
                 </a>
             </div>
-            <div class="p-12 md:w-1/2 bg-white flex flex-col justify-center">
-                <div class="mb-8">
-                    <p class="text-gray-400 text-sm font-bold uppercase mb-2">Kos Pengebumian (Bukan Ahli)</p>
-                    <h4 class="text-5xl font-black text-emerald-900">RM 1,100</h4>
-                    <p class="text-emerald-600 font-semibold mt-2 italic text-sm">*Tertutup untuk penduduk Bangi Lama sahaja</p>
+            <div class="p-6 sm:p-8 md:p-12 md:w-1/2 bg-white flex flex-col justify-center">
+                <div class="mb-6 md:mb-8">
+                    <p class="text-gray-400 text-xs sm:text-sm font-bold uppercase mb-2">Kos Pengebumian (Bukan Ahli)</p>
+                    <h4 class="text-3xl sm:text-5xl font-black text-emerald-900">RM 1,100</h4>
+                    <p class="text-emerald-600 font-semibold mt-2 italic text-xs sm:text-sm">*Tertutup untuk penduduk Bangi Lama sahaja</p>
                 </div>
-                <div class="p-6 bg-emerald-50 rounded-2xl border-l-8 border-emerald-500">
-                    <p class="text-sm text-emerald-800 leading-relaxed italic">
+                <div class="p-4 sm:p-6 bg-emerald-50 rounded-2xl border-l-8 border-emerald-500">
+                    <p class="text-xs sm:text-sm text-emerald-800 leading-relaxed italic">
                         <strong>Nota Penting:</strong> Permohonan lot hanya akan diproses setelah pembayaran disahkan (bagi bukan ahli) dan dokumen permit polis dimuat naik.
                     </p>
                 </div>
@@ -201,16 +201,16 @@ try {
 
     <!-- INFAQ DIGITAL SECTION -->
     <section id="infaq-digital" class="max-w-7xl mx-auto pb-24 px-6">
-        <div class="glass-card rounded-[40px] shadow-2xl border border-white overflow-hidden flex flex-col md:flex-row">
+        <div class="glass-card rounded-[24px] sm:rounded-[40px] shadow-2xl border border-white overflow-hidden flex flex-col md:flex-row">
             <!-- Left Side: Graphic / Info -->
-            <div class="p-12 md:w-1/2 bg-gradient-to-br from-emerald-950 to-emerald-900 text-white flex flex-col justify-center relative">
+            <div class="p-6 sm:p-8 md:p-12 md:w-1/2 bg-gradient-to-br from-emerald-950 to-emerald-900 text-white flex flex-col justify-center relative">
                 <div class="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/arabesque.png')] opacity-10"></div>
                 <div class="relative z-10">
-                    <span class="bg-emerald-800/80 text-yellow-400 px-4 py-2 rounded-full text-xs font-extrabold uppercase tracking-wider border border-emerald-700">
+                    <span class="bg-emerald-800/80 text-yellow-400 px-4 py-2 rounded-full text-[10px] sm:text-xs font-extrabold uppercase tracking-wider border border-emerald-700">
                         <i class="fas fa-hand-holding-heart mr-2"></i>Amalan Jariah
                     </span>
-                    <h3 class="text-3xl font-black mt-6 mb-4">Sumbangan Infaq Digital</h3>
-                    <p class="text-emerald-100/90 text-sm leading-relaxed mb-6">
+                    <h3 class="text-2xl sm:text-3xl font-black mt-6 mb-4">Sumbangan Infaq Digital</h3>
+                    <p class="text-emerald-100/90 text-xs sm:text-sm leading-relaxed mb-6">
                         Bantu kami meringankan beban kewangan golongan asnaf dan keluarga kurang berkemampuan untuk membiayai kos pengurusan jenazah.
                     </p>
                     <div class="space-y-4">
@@ -218,27 +218,27 @@ try {
                             <div class="bg-emerald-800/80 w-8 h-8 rounded-full flex items-center justify-center text-yellow-400 text-xs">
                                 <i class="fas fa-heart"></i>
                             </div>
-                            <span class="text-sm font-semibold text-emerald-50">Sumbangan Ikhlas Hamba Allah</span>
+                            <span class="text-xs sm:text-sm font-semibold text-emerald-50">Sumbangan Ikhlas Hamba Allah</span>
                         </div>
                         <div class="flex items-center space-x-3">
                             <div class="bg-emerald-800/80 w-8 h-8 rounded-full flex items-center justify-center text-yellow-400 text-xs">
                                 <i class="fas fa-shield-check"></i>
                             </div>
-                            <span class="text-sm font-semibold text-emerald-50">Telus, Selamat, & Terus ke Tabung Kebajikan</span>
+                            <span class="text-xs sm:text-sm font-semibold text-emerald-50">Telus, Selamat, & Terus ke Tabung Kebajikan</span>
                         </div>
                     </div>
                 </div>
             </div>
 
             <!-- Right Side: Quick Donation Form -->
-            <div class="p-12 md:w-1/2 bg-white flex flex-col justify-center">
-                <h4 class="text-lg font-bold text-emerald-950 mb-6">Sumbang Secara Atas Talian</h4>
+            <div class="p-6 sm:p-8 md:p-12 md:w-1/2 bg-white flex flex-col justify-center">
+                <h4 class="text-base sm:text-lg font-bold text-emerald-950 mb-6">Sumbang Secara Atas Talian</h4>
                 
                 <form action="payment.php" method="GET" class="space-y-4">
                     <input type="hidden" name="type" value="infaq">
                     
                     <!-- Quick Amount buttons -->
-                    <div class="grid grid-cols-4 gap-2 mb-4">
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
                         <button type="button" onclick="setQuickAmount(10)" class="quick-btn py-2.5 border border-slate-200 rounded-xl text-xs font-bold hover:border-emerald-600 hover:bg-emerald-50/50 transition">RM 10</button>
                         <button type="button" onclick="setQuickAmount(30)" class="quick-btn py-2.5 border border-slate-200 rounded-xl text-xs font-bold hover:border-emerald-600 hover:bg-emerald-50/50 transition">RM 30</button>
                         <button type="button" onclick="setQuickAmount(50)" class="quick-btn py-2.5 border border-slate-200 rounded-xl text-xs font-bold hover:border-emerald-600 hover:bg-emerald-50/50 transition">RM 50</button>
@@ -246,16 +246,16 @@ try {
                     </div>
 
                     <div>
-                        <label class="block text-[10px] font-bold text-slate-400 uppercase mb-2">Amaun Sumbangan (RM)</label>
-                        <input type="number" name="amount" id="infaqAmountInput" placeholder="Masukkan amaun sumbangan..." min="1" step="any" oninput="clearQuickBtns()" class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-semibold" required>
+                        <label class="block text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase mb-2">Amaun Sumbangan (RM)</label>
+                        <input type="number" name="amount" id="infaqAmountInput" placeholder="Masukkan amaun sumbangan..." min="1" step="any" oninput="clearQuickBtns()" class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm font-semibold" required>
                     </div>
 
                     <div>
-                        <label class="block text-[10px] font-bold text-slate-400 uppercase mb-2">Nama Penderma (Biarkan kosong jika tidak ingin dinyatakan)</label>
+                        <label class="block text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase mb-2">Nama Penderma (Biarkan kosong jika tidak ingin dinyatakan)</label>
                         <input type="text" name="name" placeholder="Nama..." class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm font-medium">
                     </div>
 
-                    <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3.5 rounded-xl font-bold transition shadow-lg shadow-emerald-600/10 flex items-center justify-center gap-2 mt-4 text-sm">
+                    <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3 sm:py-3.5 rounded-xl font-bold transition shadow-lg shadow-emerald-600/10 flex items-center justify-center gap-2 mt-4 text-xs sm:text-sm">
                         <i class="fas fa-heart text-yellow-400"></i> Sumbang Sekarang
                     </button>
                 </form>
