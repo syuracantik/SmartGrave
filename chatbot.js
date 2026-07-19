@@ -632,7 +632,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 <span>Surah Al-Fatihah - Sheikh Mishary Alafasy</span>
             </div>
             <audio class="audio-player-controls" controls autoplay>
-                <source src="https://archive.org/download/quran-tilawah-mishary-rashid-alafasy/001.mp3" type="audio/mpeg">
+                <source src="https://server8.mp3quran.net/afs/001.mp3" type="audio/mpeg">
                 Browser anda tidak menyokong pemain audio.
             </audio>
         `;
