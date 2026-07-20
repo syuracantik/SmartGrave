@@ -821,70 +821,113 @@ header::after{
   transition:transform 0.1s linear;
 }
 
+.back-home-btn {
+  display: none;
+}
+.s-ico {
+  display: block;
+}
+
 .mobile-toggle-btn {
   display: none;
 }
 
 @media (max-width: 767px) {
   header {
-    padding: 0 12px;
-    gap: 8px;
-  }
-  .logo-text {
-    font-size: 16px;
-  }
-  .logo-icon {
-    width: 32px;
-    height: 32px;
-    font-size: 16px;
-  }
-  .h-sep, .h-badge, .h-status, .h-counts, .h-space {
-    display: none !important;
-  }
-  header a[href="index.php"] {
-    font-size: 10px !important;
-    padding: 4px 10px !important;
+    display: none !important; /* Hide header completely */
   }
   .layout {
     position: relative;
     display: block;
-    height: calc(100vh - 64px);
+    height: 100vh; /* Take full viewport height */
   }
   .sidebar {
     position: absolute;
-    top: 12px;
-    left: 12px;
-    right: 12px;
+    top: 16px;
+    left: 16px;
+    right: 16px;
     z-index: 2000;
-    max-height: calc(100% - 24px - 60px);
-    border-radius: var(--radius);
+    background: transparent; /* Make container transparent */
+    border: none;
+    box-shadow: none;
+    max-height: calc(100% - 32px - 80px);
+    pointer-events: none; /* Let clicks pass through empty spaces of transparent sidebar container */
+  }
+  .search-box {
+    background: white;
+    border-radius: 24px;
+    padding: 10px 14px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
     border: 1px solid var(--border);
-    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-    box-shadow: var(--shadow-md);
+    pointer-events: auto; /* Enable clicks on search box */
+  }
+  .s-label {
+    display: none !important; /* Hide title */
+  }
+  .gps-badge {
+    display: none !important; /* Hide GPS text badge */
+  }
+  .pills {
+    margin-top: 8px;
+    gap: 4px;
+  }
+  .pill {
+    padding: 6px 12px;
+    font-size: 11px;
+    border-radius: 16px;
+  }
+  .results {
+    background: white;
+    border-radius: 24px;
+    margin-top: 12px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+    border: 1px solid var(--border);
+    max-height: 50vh;
+    pointer-events: auto; /* Enable clicks on results */
   }
   .sidebar.minimized .results {
+    display: none !important;
+  }
+  .sidebar.minimized .pills {
     display: none !important;
   }
   .sidebar.minimized {
     max-height: 140px;
     overflow: hidden;
   }
+  .back-home-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--muted);
+    font-size: 16px;
+    z-index: 10;
+    width: 24px;
+    height: 24px;
+  }
+  .s-ico {
+    display: none !important;
+  }
+  .s-input {
+    padding-left: 36px !important;
+  }
   .map-area {
     width: 100%;
     height: 100%;
   }
-  .results {
-    padding-bottom: 20px;
-  }
   .compass {
-    width: 50px;
-    height: 50px;
-    top: 165px;
-    right: 12px;
+    width: 48px;
+    height: 48px;
+    top: 80px;
+    right: 16px;
   }
   .map-layers-control {
-    top: 165px;
-    left: 12px;
+    top: 80px;
+    left: 16px;
     border-radius: 20px;
   }
   .layer-btn {
@@ -893,7 +936,7 @@ header::after{
   }
   .legend {
     bottom: 80px;
-    right: 12px;
+    right: 16px;
     padding: 10px;
     min-width: 120px;
   }
@@ -907,7 +950,7 @@ header::after{
   }
   .coord {
     bottom: 80px;
-    left: 12px;
+    left: 16px;
     padding: 6px 10px;
   }
   .mobile-toggle-btn {
@@ -967,6 +1010,7 @@ header::after{
       <div class="s-label">Carian Pusara</div>
       <div class="s-row">
         <div class="s-wrap">
+          <a href="index.php" class="back-home-btn"><i class="fas fa-arrow-left"></i></a>
           <i class="fas fa-search s-ico"></i>
           <input type="text" id="sInput" class="s-input" placeholder="Nama atau No. IC..." value="<?php echo htmlspecialchars($search_query); ?>">
         </div>
