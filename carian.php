@@ -1592,6 +1592,10 @@ function startNav(id) {
   const toggleBtn = document.getElementById('mobileToggleView');
   if (toggleBtn) toggleBtn.style.display = 'none';
 
+  if (window.innerWidth < 768) {
+    document.querySelector('.sidebar').classList.add('minimized');
+  }
+
   [_navLineLayer,_arrowLayer,_walkMkr,_startMkr,_destMkr].forEach(l=>{if(l)map.removeLayer(l)});
   _navLineLayer=_arrowLayer=_walkMkr=_startMkr=_destMkr=null;
   if(_walkInterval){clearInterval(_walkInterval);_walkInterval=null;}
