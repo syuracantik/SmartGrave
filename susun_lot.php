@@ -593,7 +593,7 @@ try {
 
 <main class="flex-1 flex flex-col h-screen overflow-hidden bg-gray-50/30">
     <!-- Header bar -->
-    <div class="px-8 py-5 border-b border-gray-100 bg-white flex items-center justify-between flex-shrink-0">
+    <div class="px-4 py-4 lg:px-8 lg:py-5 border-b border-gray-100 bg-white flex flex-col md:flex-row md:items-center justify-between gap-4 flex-shrink-0">
         <div>
             <h1 class="text-2xl font-black text-emerald-950 flex items-center gap-2">
                 <i class="fas fa-cubes text-emerald-600"></i> Susun Atur & Pemetaan Lot
@@ -612,10 +612,10 @@ try {
     </div>
 
     <!-- Main Content Area -->
-    <div class="flex-1 flex overflow-hidden min-h-0">
+    <div class="flex-1 flex flex-col lg:flex-row overflow-hidden min-h-0">
         
         <!-- Left Panel: Assignment Details or Status Counts -->
-        <aside class="w-80 border-r border-gray-100 bg-white p-6 flex flex-col justify-between flex-shrink-0 overflow-y-auto">
+        <aside class="w-full lg:w-80 border-b lg:border-b-0 lg:border-r border-gray-100 bg-white p-4 lg:p-6 flex flex-col justify-between flex-shrink-0 overflow-y-auto max-h-[35vh] lg:max-h-none">
             
             <div class="space-y-6">
                 
@@ -763,7 +763,7 @@ try {
         </aside>
 
         <!-- Right Panel: Full Leaflet Map -->
-        <div class="flex-1 p-6 relative">
+        <div class="flex-1 p-4 lg:p-6 relative min-h-0">
             <div id="map"></div>
             
             <!-- Map Layer Toggle -->

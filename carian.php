@@ -820,6 +820,74 @@ header::after{
   color:#fff;font-size:11px;font-weight:bold;
   transition:transform 0.1s linear;
 }
+
+@media (max-width: 767px) {
+  header {
+    padding: 0 12px;
+    gap: 8px;
+  }
+  .logo-text {
+    font-size: 16px;
+  }
+  .logo-icon {
+    width: 32px;
+    height: 32px;
+    font-size: 16px;
+  }
+  .h-sep, .h-badge, .h-status, .h-counts, .h-space {
+    display: none !important;
+  }
+  header a[href="index.php"] {
+    font-size: 10px !important;
+    padding: 4px 10px !important;
+  }
+  .layout {
+    grid-template-columns: 1fr;
+    grid-template-rows: 45vh 55vh;
+    height: calc(100vh - 64px);
+  }
+  .sidebar {
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
+  .results {
+    padding-bottom: 20px;
+  }
+  .compass {
+    width: 50px;
+    height: 50px;
+    top: 10px;
+    right: 10px;
+  }
+  .map-layers-control {
+    top: 10px;
+    left: 10px;
+    border-radius: 20px;
+  }
+  .layer-btn {
+    padding: 6px 12px;
+    font-size: 10px;
+  }
+  .legend {
+    bottom: 10px;
+    right: 10px;
+    padding: 10px;
+    min-width: 120px;
+  }
+  .leg-ttl {
+    font-size: 8px;
+    margin-bottom: 6px;
+  }
+  .leg-item {
+    font-size: 10px;
+    margin-bottom: 4px;
+  }
+  .coord {
+    bottom: 10px;
+    left: 10px;
+    padding: 6px 10px;
+  }
+}
 </style>
 <!-- AI Chatbot Assistant -->
 <script src="chatbot.js" defer></script>
