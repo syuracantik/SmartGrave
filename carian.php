@@ -589,6 +589,9 @@ header::after{
   box-shadow:0 -8px 32px rgba(0,0,0,0.07);
 }
 .nav-panel.open{transform:translateY(0)}
+.toggle-steps-btn {
+  display: none !important;
+}
 
 @media(min-width:768px){
   .nav-panel{
@@ -977,6 +980,34 @@ header::after{
   .mobile-toggle-btn:active {
     transform: translateX(-50%) scale(0.95);
   }
+  .toggle-steps-btn {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    width: 100%;
+    padding: 10px 0;
+    background: #022c22;
+    color: rgba(255,255,255,0.7);
+    border: none;
+    border-top: 1px solid rgba(255,255,255,0.06);
+    font-family: var(--font-display);
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .toggle-steps-btn:hover {
+    color: white;
+    background: #011c16;
+  }
+  
+  .nav-panel:not(.expanded) .nav-steps {
+    display: none !important;
+  }
+  .nav-panel:not(.expanded) .nav-live-dist {
+    display: none !important;
+  }
 }
 </style>
 <!-- AI Chatbot Assistant -->
@@ -1112,6 +1143,10 @@ header::after{
           <span>NO. LOT</span>
         </div>
       </div>
+      <!-- Toggle button for steps (only on mobile) -->
+      <button type="button" id="toggleStepsBtn" class="toggle-steps-btn" onclick="toggleNavSteps()">
+        <i class="fas fa-chevron-up"></i> Lihat Langkah
+      </button>
       <div class="nav-live-dist" id="navLiveDist" style="display:none">
         <div class="nav-live-dot"></div>
         <span>Jarak sebenar dari anda: </span>
@@ -1805,6 +1840,11 @@ function closeNav() {
   const toggleBtn = document.getElementById('mobileToggleView');
   if (toggleBtn && window.innerWidth < 768) toggleBtn.style.display = 'flex';
 
+  const panel = document.getElementById('navPanel');
+  if (panel) panel.classList.remove('expanded');
+  const stepsBtn = document.getElementById('toggleStepsBtn');
+  if (stepsBtn) stepsBtn.innerHTML = '<i class="fas fa-chevron-up"></i> Lihat Langkah';
+
   if (isSimulatingGPS) {
     // Reset simulated position to start
     userLatLng = {lat: SIMULATED_START[0], lng: SIMULATED_START[1]};
@@ -1890,6 +1930,18 @@ function toggleMobileView() {
   } else {
     sidebar.classList.add('minimized');
     btn.innerHTML = '<i class="fas fa-list"></i> Papar Senarai';
+  }
+}
+
+function toggleNavSteps() {
+  const panel = document.getElementById('navPanel');
+  const btn = document.getElementById('toggleStepsBtn');
+  if (panel.classList.contains('expanded')) {
+    panel.classList.remove('expanded');
+    btn.innerHTML = '<i class="fas fa-chevron-up"></i> Lihat Langkah';
+  } else {
+    panel.classList.add('expanded');
+    btn.innerHTML = '<i class="fas fa-chevron-down"></i> Sembunyi Langkah';
   }
 }
 
