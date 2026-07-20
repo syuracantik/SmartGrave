@@ -6,7 +6,7 @@ try {
         $stmt_count = $pdo->query("SELECT COUNT(*) FROM lot_pusara WHERE status_lot = 'Penuh'");
         if ($stmt_count) {
             $occupied_count = (int)$stmt_count->fetchColumn();
-            $baki_lot = max(0, 440 - $occupied_count);
+            $baki_lot = max(0, 830 - $occupied_count);
         }
     }
 } catch (Exception $e) {

@@ -28,7 +28,7 @@ try {
 
     $lot_stats = $pdo->query("SELECT status_lot, count(*) as jumlah FROM lot_pusara GROUP BY status_lot")->fetchAll(PDO::FETCH_KEY_PAIR);
     $lot_penuh = $lot_stats['Penuh'] ?? 0;
-    $lot_tersedia = max(0, 440 - $lot_penuh);
+    $lot_tersedia = max(0, 830 - $lot_penuh);
 
     // Demographics for predicted deaths
     $stmt_ic = $pdo->query("SELECT no_ic FROM daftar_khairat WHERE status_yuran = 'Dibayar'");

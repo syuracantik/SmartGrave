@@ -29,7 +29,7 @@
     
     <div class="mt-auto p-8">
         <?php
-        $remaining_lots = 440;
+        $remaining_lots = 830;
         $percent_occupied = 0;
         try {
             include_once 'db.php';
@@ -37,8 +37,8 @@
                 $stmt_count_full = $pdo->query("SELECT COUNT(*) FROM lot_pusara WHERE status_lot = 'Penuh'");
                 if ($stmt_count_full) {
                     $occupied_count = (int)$stmt_count_full->fetchColumn();
-                    $remaining_lots = max(0, 440 - $occupied_count);
-                    $percent_occupied = round(($occupied_count / 440) * 100);
+                    $remaining_lots = max(0, 830 - $occupied_count);
+                    $percent_occupied = round(($occupied_count / 830) * 100);
                 }
             }
         } catch (Exception $e) {

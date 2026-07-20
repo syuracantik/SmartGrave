@@ -129,8 +129,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $stmt = $pdo->query("SELECT COUNT(*) FROM lot_pusara WHERE status_lot = 'Penuh'");
 $lotPenuh = (int)$stmt->fetchColumn();
 
-// Kapasiti keseluruhan kubur ialah 440
-$lotJumlah = 440;
+// Kapasiti keseluruhan kubur ialah 830
+$lotJumlah = 830;
 $lotTersedia = max(0, $lotJumlah - $lotPenuh);
 
 $peratusGuna = round(($lotPenuh / $lotJumlah) * 100);

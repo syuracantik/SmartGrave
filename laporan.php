@@ -32,8 +32,8 @@ try {
     $lot_tersedia = $lot_stats['Tersedia'] ?? 0;
     $lot_penuh = $lot_stats['Penuh'] ?? 0;
     
-    // Ensure accurate available count based on total 440 grid
-    $lot_tersedia = max(0, 440 - $lot_penuh);
+    // Ensure accurate available count based on total 830 grid
+    $lot_tersedia = max(0, 830 - $lot_penuh);
 
     // D. Data untuk Carta (Bayaran Bulanan - 6 bulan terakhir)
     $chart_query = $pdo->query("
@@ -346,11 +346,11 @@ try {
             <div class="divide-y divide-gray-100 text-xs">
                 <div class="py-3.5 flex justify-between">
                     <span class="text-slate-500 font-medium">Jumlah Kapasiti Grid</span>
-                    <span class="font-extrabold text-slate-800">440 Lot</span>
+                    <span class="font-extrabold text-slate-800">830 Lot</span>
                 </div>
                 <div class="py-3.5 flex justify-between">
                     <span class="text-slate-500 font-medium">Peratus Kapasiti Diguna</span>
-                    <span class="font-extrabold text-red-600"><?= round(($lot_penuh / 440) * 100, 1) ?>%</span>
+                    <span class="font-extrabold text-red-600"><?= round(($lot_penuh / 830) * 100, 1) ?>%</span>
                 </div>
                 <div class="py-3.5 flex justify-between">
                     <span class="text-slate-500 font-medium">Pengebumian Bulanan Purata</span>

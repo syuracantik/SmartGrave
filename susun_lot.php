@@ -37,12 +37,12 @@ if (!function_exists('dapatkanKoordinatLotPHP')) {
         $num = (int)substr($lot_id, 1);
         
         $zone_starts = [
-            'A' => ['lat' => 2.89916, 'lng' => 101.77510],
-            'B' => ['lat' => 2.89916, 'lng' => 101.77556],
-            'C' => ['lat' => 2.89992, 'lng' => 101.77556],
+            'A' => ['lat' => 2.89886, 'lng' => 101.77490],
+            'B' => ['lat' => 2.89886, 'lng' => 101.77542],
+            'C' => ['lat' => 2.89992, 'lng' => 101.77542],
         ];
         
-        $s = $zone_starts[$zon] ?? ['lat' => 2.89916, 'lng' => 101.77510];
+        $s = $zone_starts[$zon] ?? ['lat' => 2.89886, 'lng' => 101.77490];
         
         $lot_w = ($zon === 'C') ? 0.000016 : 0.000022;
         $lot_h = ($zon === 'C') ? 0.000028 : 0.000042;
@@ -50,7 +50,7 @@ if (!function_exists('dapatkanKoordinatLotPHP')) {
         $step_x = ($zon === 'C') ? 0.000021 : 0.000028;
         $step_y = ($zon === 'C') ? 0.000033 : 0.000050;
         
-        $cols = ($zon === 'C') ? 17 : 11;
+        $cols = ($zon === 'C') ? 27 : (($zon === 'B' ? 17 : 13));
         
         $idx = $num - 1;
         $r = floor($idx / $cols);
@@ -66,7 +66,7 @@ if (!function_exists('dapatkanKoordinatLotPHP')) {
 if (!function_exists('jarakKePintuPHP')) {
     function jarakKePintuPHP($lot_id) {
         $coord = dapatkanKoordinatLotPHP($lot_id);
-        $gate = ['lat' => 2.9000, 'lng' => 101.77548];
+        $gate = ['lat' => 2.90016, 'lng' => 101.77537];
         $dlat = $coord['lat'] - $gate['lat'];
         $dlng = $coord['lng'] - $gate['lng'];
         return sqrt($dlat * $dlat + $dlng * $dlng);
@@ -126,11 +126,11 @@ if (!function_exists('dapatkanSyorLot')) {
         $last_lot = $stmt_last->fetchColumn();
         
         // Konfigurasi baris dan lajur mengikut zon
-        $capacities = ['A' => 220, 'B' => 165, 'C' => 85];
-        $cols_config = ['A' => 11, 'B' => 11, 'C' => 17];
+        $capacities = ['A' => 338, 'B' => 357, 'C' => 135];
+        $cols_config = ['A' => 13, 'B' => 17, 'C' => 27];
         
-        $cols = $cols_config[$zon_sasaran] ?? 11;
-        $total_lots = $capacities[$zon_sasaran] ?? 220;
+        $cols = $cols_config[$zon_sasaran] ?? 13;
+        $total_lots = $capacities[$zon_sasaran] ?? 338;
         $max_row = ($total_lots / $cols) - 1;
         
         // Cari lot kosong bermula dari baris paling atas (paling dekat dengan pintu masuk) turun ke bawah
@@ -695,7 +695,7 @@ try {
                     <div class="absolute -right-10 -bottom-10 w-24 h-24 bg-emerald-500/20 blur-xl rounded-full"></div>
                     
                     <p class="text-[10px] font-bold text-emerald-400 uppercase tracking-widest">Jumlah Lot Pusara</p>
-                    <h3 class="text-3xl font-black mt-1">440 <span class="text-xs font-normal text-emerald-400">Pusara</span></h3>
+                    <h3 class="text-3xl font-black mt-1">830 <span class="text-xs font-normal text-emerald-400">Pusara</span></h3>
                     
                     <div class="grid grid-cols-2 gap-3 mt-5">
                         <div class="bg-white/10 p-3 rounded-2xl border border-white/5">
@@ -704,7 +704,7 @@ try {
                         </div>
                         <div class="bg-white/10 p-3 rounded-2xl border border-white/5">
                             <span class="text-[9px] font-bold text-emerald-200 uppercase tracking-wider">Tersedia</span>
-                            <span class="text-lg font-black block mt-0.5 text-green-300" id="sbEmptyLots">440</span>
+                            <span class="text-lg font-black block mt-0.5 text-green-300" id="sbEmptyLots">830</span>
                         </div>
                     </div>
                 </div>
@@ -917,7 +917,7 @@ const LAST_LOT = <?php echo json_encode($last_lot); ?>;
 // Map Coordinates
 const MASJID_POS = [2.90061, 101.78549];
 const CENTER = [2.89966, 101.77551];
-const ENTRY_GATE = [2.90016, 101.77551];
+const ENTRY_GATE = [2.90016, 101.77537];
 
 const map = L.map('map', {
     center: CENTER, 
@@ -970,12 +970,12 @@ const GAP_Y  = 0.000008;
 const STEP_X = LOT_W + GAP_X;  // 0.000033 per column
 const STEP_Y = LOT_H + GAP_Y;  // 0.000050 per row
 const ZONE_COLS = 11;
-const ZONE_ROWS = 20;
+const ZONE_ROWS = 26;
 
 const ZONE_START = {
-  A: {lat: 2.89916, lng: 101.77510},
-  B: {lat: 2.89916, lng: 101.77556},
-  C: {lat: 2.89992, lng: 101.77556}, // Zon C (Kanak-kanak) diletakkan di atas Zon B (starts after B)
+  A: {lat: 2.89886, lng: 101.77490},
+  B: {lat: 2.89886, lng: 101.77542},
+  C: {lat: 2.89992, lng: 101.77542}, // Zon C (Kanak-kanak) diletakkan di atas Zon B (starts after B)
 };
 
 const LOT_COORDS = {};
@@ -996,8 +996,8 @@ function generateLots(zon) {
   const s = ZONE_START[zon];
   const rnd = seededRandom(zon === 'A' ? 31 : (zon === 'B' ? 67 : 89));
   let n = 1;
-  const rows = zon === 'C' ? 5 : (zon === 'B' ? 15 : ZONE_ROWS);
-  const cols = zon === 'C' ? 17 : ZONE_COLS;
+  const rows = zon === 'C' ? 5 : (zon === 'B' ? 21 : ZONE_ROWS);
+  const cols = zon === 'C' ? 27 : (zon === 'B' ? 17 : 13);
   const step_x = zon === 'C' ? 0.000021 : STEP_X;
   const step_y = zon === 'C' ? 0.000033 : STEP_Y;
   const lot_w = zon === 'C' ? 0.000016 : LOT_W;
@@ -1099,8 +1099,10 @@ document.querySelector('#modalLot form').addEventListener('submit', function(e) 
 function drawZoneBoundary(zon) {
   const cfg = ZONE_CFG[zon];
   const s = ZONE_START[zon];
-  const totalW = ZONE_COLS * STEP_X;
-  const totalH = zon === 'C' ? 5 * 0.000033 : (zon === 'B' ? 15 * STEP_Y : ZONE_ROWS * STEP_Y);
+  const cols = zon === 'C' ? 27 : (zon === 'B' ? 17 : 13);
+  const step_x = zon === 'C' ? 0.000021 : STEP_X;
+  const totalW = cols * step_x;
+  const totalH = zon === 'C' ? 5 * 0.000033 : (zon === 'B' ? 21 * STEP_Y : ZONE_ROWS * STEP_Y);
   const pad = 0.00003;
 
   L.rectangle([
@@ -1112,19 +1114,23 @@ function drawZoneBoundary(zon) {
   }).addTo(map);
 
   // Label: Letak label C di utara (atas) dan label B di selatan (bawah) supaya tidak bertindih
-  const labelLat = zon === 'C' ? s.lat + totalH + 0.00006 : s.lat - 0.00008;
+  const labelLat = zon === 'C' ? s.lat + totalH + 0.00004 : s.lat - 0.00004;
   L.marker(
     [labelLat, s.lng + totalW / 2],
     {icon:L.divIcon({
       html:`<div style="
         background:white;color:${cfg.color};
         font-size:10px;font-weight:800;
-        padding:3px 10px;border-radius:6px;
+        padding:4px 10px;border-radius:6px;
         border:1.5px solid ${cfg.color}40;
         white-space:nowrap;font-family:'DM Mono',monospace;
-        box-shadow:0 2px 6px rgba(0,0,0,.12)
+        box-shadow:0 2px 6px rgba(0,0,0,.12);
+        transform: translate(-50%, -50%);
+        display: inline-block;
       ">${cfg.label}</div>`,
-      className:'',iconAnchor:[28,8]
+      className:'',
+      iconSize: null,
+      iconAnchor:[0,0]
     })}
   ).addTo(map);
 }
@@ -1132,7 +1138,7 @@ function drawZoneBoundary(zon) {
 // Draw landmarks
 function drawLandmarks() {
   // Koridor tengah antara Zon A dan Zon B/C
-  const corridorLng = (ZONE_START.A.lng + ZONE_COLS * STEP_X + ZONE_START.B.lng) / 2;
+  const corridorLng = (ZONE_START.A.lng + 13 * STEP_X + ZONE_START.B.lng) / 2;
   const pathPts = [
     ENTRY_GATE,
     [ZONE_START.A.lat, corridorLng],
@@ -1146,17 +1152,17 @@ function drawLandmarks() {
     {lat:2.90025,        lng:101.77520,         icon:'🅿️', label:'Tempat Letak Kereta'},
     {lat:ENTRY_GATE[0],  lng:ENTRY_GATE[1],     icon:'🚪', label:'Pintu Masuk Utama'},
     // Water Hydrants (Pili Air) near the lots
-    {lat:2.89986,        lng:101.77507,         icon:'🚿', label:'Pili Air (Zon A - Barat)'},
-    {lat:2.89936,        lng:101.77507,         icon:'🚿', label:'Pili Air (Zon A - Barat)'},
-    {lat:2.89986,        lng:101.77589,         icon:'🚿', label:'Pili Air (Zon B - Timur)'},
-    {lat:2.89936,        lng:101.77589,         icon:'🚿', label:'Pili Air (Zon B - Timur)'},
+    {lat:2.89986,        lng:101.77486,         icon:'🚿', label:'Pili Air (Zon A - Barat)'},
+    {lat:2.89936,        lng:101.77486,         icon:'🚿', label:'Pili Air (Zon A - Barat)'},
+    {lat:2.89986,        lng:101.77601,         icon:'🚿', label:'Pili Air (Zon B - Timur)'},
+    {lat:2.89936,        lng:101.77601,         icon:'🚿', label:'Pili Air (Zon B - Timur)'},
     // Trees near the lots
-    {lat:2.90016,        lng:101.77507,         icon:'🌳', label:'Pokok (Barat Laut Zon A)'},
-    {lat:2.89916,        lng:101.77507,         icon:'🌳', label:'Pokok (Barat Daya Zon A)'},
-    {lat:2.90016,        lng:101.77589,         icon:'🌳', label:'Pokok (Timur Laut Zon B/C)'},
-    {lat:2.89916,        lng:101.77589,         icon:'🌳', label:'Pokok (Tenggara Zon B)'},
-    {lat:2.89966,        lng:101.77507,         icon:'🌳', label:'Pokok (Barat Zon A)'},
-    {lat:2.89966,        lng:101.77589,         icon:'🌳', label:'Pokok (Timur Zon B)'},
+    {lat:2.90016,        lng:101.77486,         icon:'🌳', label:'Pokok (Barat Laut Zon A)'},
+    {lat:2.89916,        lng:101.77486,         icon:'🌳', label:'Pokok (Barat Daya Zon A)'},
+    {lat:2.90016,        lng:101.77601,         icon:'🌳', label:'Pokok (Timur Laut Zon B/C)'},
+    {lat:2.89916,        lng:101.77601,         icon:'🌳', label:'Pokok (Tenggara Zon B)'},
+    {lat:2.89966,        lng:101.77486,         icon:'🌳', label:'Pokok (Barat Zon A)'},
+    {lat:2.89966,        lng:101.77601,         icon:'🌳', label:'Pokok (Timur Zon B)'},
     {lat:2.89966,        lng:corridorLng,       icon:'🌳', label:'Pokok Besar (Koridor Tengah)'},
   ].forEach(lm=>{
     L.marker([lm.lat,lm.lng],{
