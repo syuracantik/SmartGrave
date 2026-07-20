@@ -821,6 +821,10 @@ header::after{
   transition:transform 0.1s linear;
 }
 
+.mobile-toggle-btn {
+  display: none;
+}
+
 @media (max-width: 767px) {
   header {
     padding: 0 12px;
@@ -842,13 +846,32 @@ header::after{
     padding: 4px 10px !important;
   }
   .layout {
-    grid-template-columns: 1fr;
-    grid-template-rows: 45vh 55vh;
+    position: relative;
+    display: block;
     height: calc(100vh - 64px);
   }
   .sidebar {
-    border-right: none;
-    border-bottom: 1px solid var(--border);
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    right: 12px;
+    z-index: 2000;
+    max-height: calc(100% - 24px - 60px);
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: var(--shadow-md);
+  }
+  .sidebar.minimized .results {
+    display: none !important;
+  }
+  .sidebar.minimized {
+    max-height: 140px;
+    overflow: hidden;
+  }
+  .map-area {
+    width: 100%;
+    height: 100%;
   }
   .results {
     padding-bottom: 20px;
@@ -856,12 +879,12 @@ header::after{
   .compass {
     width: 50px;
     height: 50px;
-    top: 10px;
-    right: 10px;
+    top: 165px;
+    right: 12px;
   }
   .map-layers-control {
-    top: 10px;
-    left: 10px;
+    top: 165px;
+    left: 12px;
     border-radius: 20px;
   }
   .layer-btn {
@@ -869,8 +892,8 @@ header::after{
     font-size: 10px;
   }
   .legend {
-    bottom: 10px;
-    right: 10px;
+    bottom: 80px;
+    right: 12px;
     padding: 10px;
     min-width: 120px;
   }
@@ -883,9 +906,33 @@ header::after{
     margin-bottom: 4px;
   }
   .coord {
-    bottom: 10px;
-    left: 10px;
+    bottom: 80px;
+    left: 12px;
     padding: 6px 10px;
+  }
+  .mobile-toggle-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    position: absolute;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 2500;
+    background: linear-gradient(135deg, var(--green-d) 0%, var(--green) 100%);
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 30px;
+    font-family: var(--font-display);
+    font-size: 13px;
+    font-weight: 800;
+    box-shadow: 0 8px 24px rgba(5,150,105,0.4);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .mobile-toggle-btn:active {
+    transform: translateX(-50%) scale(0.95);
   }
 }
 </style>
@@ -1030,6 +1077,11 @@ header::after{
     </div>
   </div>
 </div>
+
+<!-- Mobile Toggle View Button -->
+<button id="mobileToggleView" class="mobile-toggle-btn" onclick="toggleMobileView()">
+  <i class="fas fa-list"></i> Papar Senarai
+</button>
 
 <script>
 // ── GRAVE DATA ──
@@ -1465,6 +1517,14 @@ function focusGrave(id) {
   const card=document.getElementById(`gc-${id}`);
   if(card){card.classList.add('sel');card.scrollIntoView({behavior:'smooth',block:'nearest'});}
   if(document.getElementById('navPanel').classList.contains('open')) startNav(id);
+
+  if (window.innerWidth < 768) {
+    document.querySelector('.sidebar').classList.add('minimized');
+    const toggleBtn = document.getElementById('mobileToggleView');
+    if (toggleBtn) {
+      toggleBtn.innerHTML = '<i class="fas fa-list"></i> Papar Senarai';
+    }
+  }
 }
 
 // ── WALKING NAVIGATION ──
@@ -1484,6 +1544,9 @@ function startNav(id) {
   if(!d||!d.lat) return;
   _currentNavId=id;
   map.closePopup();
+
+  const toggleBtn = document.getElementById('mobileToggleView');
+  if (toggleBtn) toggleBtn.style.display = 'none';
 
   [_navLineLayer,_arrowLayer,_walkMkr,_startMkr,_destMkr].forEach(l=>{if(l)map.removeLayer(l)});
   _navLineLayer=_arrowLayer=_walkMkr=_startMkr=_destMkr=null;
@@ -1691,6 +1754,9 @@ function closeNav() {
   _navLineLayer=_arrowLayer=_walkMkr=_startMkr=_destMkr=null;
   if(_walkInterval){clearInterval(_walkInterval);_walkInterval=null;}
   
+  const toggleBtn = document.getElementById('mobileToggleView');
+  if (toggleBtn && window.innerWidth < 768) toggleBtn.style.display = 'flex';
+
   if (isSimulatingGPS) {
     // Reset simulated position to start
     userLatLng = {lat: SIMULATED_START[0], lng: SIMULATED_START[1]};
@@ -1758,6 +1824,25 @@ function doSearch() {
       </button>
     </div>`;
   }).join('');
+  if (window.innerWidth < 768) {
+    document.querySelector('.sidebar').classList.remove('minimized');
+    const toggleBtn = document.getElementById('mobileToggleView');
+    if (toggleBtn) {
+      toggleBtn.innerHTML = '<i class="fas fa-map"></i> Papar Peta';
+    }
+  }
+}
+
+function toggleMobileView() {
+  const sidebar = document.querySelector('.sidebar');
+  const btn = document.getElementById('mobileToggleView');
+  if (sidebar.classList.contains('minimized')) {
+    sidebar.classList.remove('minimized');
+    btn.innerHTML = '<i class="fas fa-map"></i> Papar Peta';
+  } else {
+    sidebar.classList.add('minimized');
+    btn.innerHTML = '<i class="fas fa-list"></i> Papar Senarai';
+  }
 }
 
 document.getElementById('sInput').addEventListener('keydown',e=>{if(e.key==='Enter')doSearch();});
