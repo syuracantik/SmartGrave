@@ -11,5 +11,8 @@ RUN docker-php-ext-install pdo pdo_pgsql
 # Copy the application source code
 COPY . /var/www/html/
 
+# Set ownership to Apache user (www-data) so uploads are permitted
+RUN chown -R www-data:www-data /var/www/html/
+
 # Expose port 80 (default Apache port)
 EXPOSE 80
