@@ -121,8 +121,37 @@ function uploadDokumen($file_key, $subfolder) {
 // ============================================================
 // PROCESS FORM — MESTI SEBELUM include header.php
 // ============================================================
-$path_sijil  = '';
-$path_permit = '';
+$edit_tempahan_id = isset($_GET['edit_tempahan_id']) ? intval($_GET['edit_tempahan_id']) : 0;
+$edit_booking = null;
+
+if ($edit_tempahan_id > 0) {
+    try {
+        $stmt = $pdo->prepare("
+            SELECT t.*, j.nama_jenazah, j.no_ic, j.jantina, j.tarikh_wafat, j.masa_wafat, j.lokasi_wafat
+            FROM tempahan t
+            JOIN maklumat_jenazah j ON j.id = t.jenazah_id
+            WHERE t.id = ? AND t.user_id = ? AND t.status_proses = 'Tolak'
+        ");
+        $stmt->execute([$edit_tempahan_id, $user_id]);
+        $edit_booking = $stmt->fetch(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        $error = "Ralat mengambil data tempahan: " . $e->getMessage();
+    }
+}
+
+// Form field default values
+$nama_jenazah_val = $edit_booking ? $edit_booking['nama_jenazah'] : '';
+$no_ic_val        = $edit_booking ? $edit_booking['no_ic'] : '';
+$jantina_val      = $edit_booking ? $edit_booking['jantina'] : '';
+$tarikh_wafat_val = $edit_booking ? $edit_booking['tarikh_wafat'] : '';
+$masa_wafat_val   = $edit_booking ? $edit_booking['masa_wafat'] : '';
+$lokasi_wafat_val = $edit_booking ? $edit_booking['lokasi_wafat'] : '';
+$hub_waris_val    = $edit_booking ? $edit_booking['hub_waris'] : '';
+$no_tel_alt_val   = $edit_booking ? $edit_booking['no_tel_alt'] : '';
+$catatan_val      = $edit_booking ? $edit_booking['catatan'] : '';
+
+$path_sijil  = $edit_booking ? $edit_booking['bukti_sijil'] : '';
+$path_permit = $edit_booking ? $edit_booking['permit_polis'] : '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
@@ -136,9 +165,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $no_tel_alt   = trim($_POST['no_tel_alt']);
         $catatan      = trim($_POST['catatan'] ?? '');
 
+        // Pre-populate input values for re-display on error
+        $nama_jenazah_val = $nama_jenazah;
+        $no_ic_val        = $no_ic;
+        $jantina_val      = $jantina;
+        $tarikh_wafat_val = $tarikh_wafat;
+        $masa_wafat_val   = $masa_wafat;
+        $lokasi_wafat_val = $lokasi_wafat;
+        $hub_waris_val    = $hub_waris;
+        $no_tel_alt_val   = $no_tel_alt;
+        $catatan_val      = $catatan;
+
         if ($hub_waris === 'lain') {
             $hub_waris = trim($_POST['hubungan_lain'] ?? '');
             if (empty($hub_waris)) throw new InvalidArgumentException("Sila nyatakan hubungan dengan si mati.");
+            $hub_waris_val = 'lain';
         }
 
         if (empty($nama_jenazah))  throw new InvalidArgumentException("Sila masukkan nama penuh si mati.");
@@ -149,46 +190,78 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (empty($lokasi_wafat))  throw new InvalidArgumentException("Sila masukkan lokasi kematian.");
         if (empty($hub_waris))     throw new InvalidArgumentException("Sila pilih hubungan dengan si mati.");
         if (empty($no_tel_alt))    throw new InvalidArgumentException("Sila masukkan nombor telefon alternatif.");
-        if (empty($_FILES['dokumen_sijil']['name'])) throw new InvalidArgumentException("Sila muat naik Sijil Kematian.");
-        if (empty($_FILES['permit_polis']['name']))  throw new InvalidArgumentException("Sila muat naik Permit Polis.");
+        
+        // Documents are required only for new bookings
+        if (!$edit_booking && empty($_FILES['dokumen_sijil']['name'])) throw new InvalidArgumentException("Sila muat naik Sijil Kematian.");
+        if (!$edit_booking && empty($_FILES['permit_polis']['name']))  throw new InvalidArgumentException("Sila muat naik Permit Polis.");
 
-        $path_sijil  = uploadDokumen('dokumen_sijil', 'sijil_kematian');
-        $path_permit = uploadDokumen('permit_polis',  'permit_polis');
+        $new_sijil_uploaded = false;
+        $new_permit_uploaded = false;
+
+        if (!empty($_FILES['dokumen_sijil']['name'])) {
+            $path_sijil  = uploadDokumen('dokumen_sijil', 'sijil_kematian');
+            $new_sijil_uploaded = true;
+        }
+        if (!empty($_FILES['permit_polis']['name'])) {
+            $path_permit = uploadDokumen('permit_polis',  'permit_polis');
+            $new_permit_uploaded = true;
+        }
 
         $pdo->beginTransaction();
 
-        $stmtJ = $pdo->prepare("
-            INSERT INTO maklumat_jenazah 
-                (nama_jenazah, no_ic, jantina, tarikh_wafat, masa_wafat, lokasi_wafat)
-            VALUES (?, ?, ?, ?, ?, ?)
-        ");
-        $stmtJ->execute([$nama_jenazah, $no_ic, $jantina, $tarikh_wafat, $masa_wafat, $lokasi_wafat]);
-        $jenazah_id = (int)$pdo->lastInsertId();
+        if ($edit_booking) {
+            // Update Deceased info
+            $stmtJ = $pdo->prepare("
+                UPDATE maklumat_jenazah 
+                SET nama_jenazah = ?, no_ic = ?, jantina = ?, tarikh_wafat = ?, masa_wafat = ?, lokasi_wafat = ?
+                WHERE id = ?
+            ");
+            $stmtJ->execute([$nama_jenazah, $no_ic, $jantina, $tarikh_wafat, $masa_wafat, $lokasi_wafat, $edit_booking['jenazah_id']]);
 
-        $stmtT = $pdo->prepare("
-            INSERT INTO tempahan 
-                (jenazah_id, user_id, hub_waris, no_tel_alt, catatan, bukti_sijil, permit_polis, status_proses, tarikh_mohon)
-            VALUES (?, ?, ?, ?, ?, ?, ?, 'Pending', NOW())
-        ");
-        $stmtT->execute([$jenazah_id, $user_id, $hub_waris, $no_tel_alt, $catatan, $path_sijil, $path_permit]);
-        $tempahan_id = (int)$pdo->lastInsertId();
+            // Update Booking info & change status to 'Bayaran Berjaya' (re-submit)
+            $stmtT = $pdo->prepare("
+                UPDATE tempahan 
+                SET hub_waris = ?, no_tel_alt = ?, catatan = ?, bukti_sijil = ?, permit_polis = ?, status_proses = 'Bayaran Berjaya', updated_at = NOW()
+                WHERE id = ?
+            ");
+            $stmtT->execute([$hub_waris, $no_tel_alt, $catatan, $path_sijil, $path_permit, $edit_tempahan_id]);
+            
+            $pdo->commit();
+            
+            header("Location: waris_dashboard.php?edit_success=1");
+            exit();
+        } else {
+            $stmtJ = $pdo->prepare("
+                INSERT INTO maklumat_jenazah 
+                    (nama_jenazah, no_ic, jantina, tarikh_wafat, masa_wafat, lokasi_wafat)
+                VALUES (?, ?, ?, ?, ?, ?)
+            ");
+            $stmtJ->execute([$nama_jenazah, $no_ic, $jantina, $tarikh_wafat, $masa_wafat, $lokasi_wafat]);
+            $jenazah_id = (int)$pdo->lastInsertId();
 
-        $pdo->commit();
+            $stmtT = $pdo->prepare("
+                INSERT INTO tempahan 
+                    (jenazah_id, user_id, hub_waris, no_tel_alt, catatan, bukti_sijil, permit_polis, status_proses, tarikh_mohon)
+                VALUES (?, ?, ?, ?, ?, ?, ?, 'Pending', NOW())
+            ");
+            $stmtT->execute([$jenazah_id, $user_id, $hub_waris, $no_tel_alt, $catatan, $path_sijil, $path_permit]);
+            $tempahan_id = (int)$pdo->lastInsertId();
 
-        // BUG FIX: redirect boleh jalan sebab header.php belum include lagi
-        header("Location: payment.php?type=booking&tempahan_id=" . $tempahan_id);
-        exit();
+            $pdo->commit();
 
+            header("Location: payment.php?type=booking&tempahan_id=" . $tempahan_id);
+            exit();
+        }
     } catch (InvalidArgumentException $e) {
         if ($pdo->inTransaction()) $pdo->rollBack();
-        if ($path_sijil  && file_exists(__DIR__.'/'.$path_sijil))  unlink(__DIR__.'/'.$path_sijil);
-        if ($path_permit && file_exists(__DIR__.'/'.$path_permit)) unlink(__DIR__.'/'.$path_permit);
+        if (isset($new_sijil_uploaded) && $new_sijil_uploaded && $path_sijil && file_exists(__DIR__.'/'.$path_sijil))  unlink(__DIR__.'/'.$path_sijil);
+        if (isset($new_permit_uploaded) && $new_permit_uploaded && $path_permit && file_exists(__DIR__.'/'.$path_permit)) unlink(__DIR__.'/'.$path_permit);
         $error = $e->getMessage();
     } catch (Exception $e) {
         if ($pdo->inTransaction()) $pdo->rollBack();
-        if ($path_sijil  && file_exists(__DIR__.'/'.$path_sijil))  unlink(__DIR__.'/'.$path_sijil);
-        if ($path_permit && file_exists(__DIR__.'/'.$path_permit)) unlink(__DIR__.'/'.$path_permit);
-        $error = "Ralat: " . $e->getMessage();
+        if (isset($new_sijil_uploaded) && $new_sijil_uploaded && $path_sijil && file_exists(__DIR__.'/'.$path_sijil))  unlink(__DIR__.'/'.$path_sijil);
+        if (isset($new_permit_uploaded) && $new_permit_uploaded && $path_permit && file_exists(__DIR__.'/'.$path_permit)) unlink(__DIR__.'/'.$path_permit);
+        $error = "Ralat sistem: " . $e->getMessage();
     }
 }
 
@@ -273,14 +346,15 @@ include 'sidebar.php';
                         <input type="text" name="nama_jenazah" 
                                class="w-full bg-transparent border-0 border-b-2 border-slate-200 px-0 py-3 focus:border-emerald-500 focus:ring-0 transition-all uppercase"
                                placeholder="Nama penuh" required
-                               value="<?php echo htmlspecialchars($_POST['nama_jenazah'] ?? ''); ?>">
+                               value="<?php echo htmlspecialchars($nama_jenazah_val); ?>">
                     </div>
                     
                     <div class="group">
                         <label class="block text-xs font-semibold text-emerald-700 uppercase tracking-wider mb-3">No. Kad Pengenalan Si Mati <span class="text-rose-500">*</span></label>
                         <input type="text" name="no_ic" id="noIcJenazah"
                                class="w-full bg-transparent border-0 border-b-2 border-slate-200 px-0 py-3 focus:border-emerald-500 focus:ring-0 transition-all"
-                               placeholder="000000-00-0000" maxlength="14" required inputmode="numeric">
+                               placeholder="000000-00-0000" maxlength="14" required inputmode="numeric"
+                               value="<?php echo htmlspecialchars($no_ic_val); ?>">
                         <div class="mt-2 flex items-center gap-2">
                             <span id="icHint" class="text-xs text-slate-400">Masukkan 12 digit nombor IC</span>
                         </div>
@@ -293,23 +367,23 @@ include 'sidebar.php';
                         <label class="block text-xs font-semibold text-emerald-700 uppercase tracking-wider mb-3">Jantina <span class="text-rose-500">*</span></label>
                         <select name="jantina" class="w-full bg-transparent border-0 border-b-2 border-slate-200 px-0 py-3 focus:border-emerald-500 focus:ring-0 appearance-none" required>
                             <option value="">-- Pilih --</option>
-                            <option value="Lelaki"    <?php echo ($_POST['jantina'] ?? '') === 'Lelaki'    ? 'selected' : ''; ?>>Lelaki</option>
-                            <option value="Perempuan" <?php echo ($_POST['jantina'] ?? '') === 'Perempuan' ? 'selected' : ''; ?>>Perempuan</option>
+                            <option value="Lelaki"    <?php echo ($jantina_val === 'Lelaki')    ? 'selected' : ''; ?>>Lelaki</option>
+                            <option value="Perempuan" <?php echo ($jantina_val === 'Perempuan') ? 'selected' : ''; ?>>Perempuan</option>
                         </select>
                     </div>
-
+ 
                     <div class="group">
                         <label class="block text-xs font-semibold text-emerald-700 uppercase tracking-wider mb-3">Tarikh Kematian <span class="text-rose-500">*</span></label>
                         <input type="date" name="tarikh_wafat" onclick="this.showPicker()"
                                class="w-full px-5 py-4 bg-gray-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none text-sm font-medium transition-all" required
-                               value="<?php echo htmlspecialchars($_POST['tarikh_wafat'] ?? ''); ?>">
+                               value="<?php echo htmlspecialchars($tarikh_wafat_val); ?>">
                     </div>
-
+ 
                     <div class="group">
                         <label class="block text-xs font-semibold text-emerald-700 uppercase tracking-wider mb-3">Masa Kematian <span class="text-rose-500">*</span></label>
                         <input type="time" name="masa_wafat" onclick="this.showPicker()"
                                class="w-full px-5 py-4 bg-gray-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none text-sm font-medium transition-all" required
-                               value="<?php echo htmlspecialchars($_POST['masa_wafat'] ?? ''); ?>">
+                               value="<?php echo htmlspecialchars($masa_wafat_val); ?>">
                     </div>
                     
                     <div class="md:col-span-2 group">
@@ -317,7 +391,7 @@ include 'sidebar.php';
                         <input type="text" name="lokasi_wafat"
                                class="w-full bg-transparent border-0 border-b-2 border-slate-200 px-0 py-3 focus:border-emerald-500 focus:ring-0"
                                placeholder="Contoh: Hospital Serdang" required
-                               value="<?php echo htmlspecialchars($_POST['lokasi_wafat'] ?? ''); ?>">
+                               value="<?php echo htmlspecialchars($lokasi_wafat_val); ?>">
                     </div>
                 </div>
             </div>
@@ -343,19 +417,23 @@ include 'sidebar.php';
                                 class="w-full bg-transparent border-0 border-b-2 border-slate-200 px-0 py-3 focus:border-emerald-500 focus:ring-0" required
                                 onchange="toggleHubunganLain()">
                             <option value="">-- Pilih Hubungan --</option>
-                            <option value="Bapa">Bapa</option>
-                            <option value="Ibu">Ibu</option>
-                            <option value="Suami">Suami</option>
-                            <option value="Isteri">Isteri</option>
-                            <option value="Anak">Anak</option>
-                            <option value="Adik-beradik">Adik-beradik</option>
-                            <option value="lain">Lain-lain</option>
+                            <option value="Bapa" <?php echo $hub_waris_val === 'Bapa' ? 'selected' : ''; ?>>Bapa</option>
+                            <option value="Ibu" <?php echo $hub_waris_val === 'Ibu' ? 'selected' : ''; ?>>Ibu</option>
+                            <option value="Suami" <?php echo $hub_waris_val === 'Suami' ? 'selected' : ''; ?>>Suami</option>
+                            <option value="Isteri" <?php echo $hub_waris_val === 'Isteri' ? 'selected' : ''; ?>>Isteri</option>
+                            <option value="Anak" <?php echo $hub_waris_val === 'Anak' ? 'selected' : ''; ?>>Anak</option>
+                            <option value="Adik-beradik" <?php echo $hub_waris_val === 'Adik-beradik' ? 'selected' : ''; ?>>Adik-beradik</option>
+                            <?php 
+                            $is_lain = !empty($hub_waris_val) && !in_array($hub_waris_val, ['Bapa', 'Ibu', 'Suami', 'Isteri', 'Anak', 'Adik-beradik']);
+                            ?>
+                            <option value="lain" <?php echo $is_lain ? 'selected' : ''; ?>>Lain-lain</option>
                         </select>
                     </div>
 
-                    <div class="md:col-span-2 group hidden" id="hubunganLainWrapper">
+                    <div class="md:col-span-2 group <?php echo $is_lain ? '' : 'hidden'; ?>" id="hubunganLainWrapper">
                         <label class="block text-xs font-semibold text-emerald-700 uppercase tracking-wider mb-3">Nyatakan Hubungan <span class="text-rose-500">*</span></label>
                         <input type="text" name="hubungan_lain" id="hubunganLainInput"
+                               value="<?php echo htmlspecialchars($is_lain ? $hub_waris_val : ''); ?>"
                                class="w-full bg-emerald-50/30 border-0 border-b-2 border-emerald-300 px-0 py-3 focus:border-emerald-500 focus:ring-0">
                     </div>
                     
@@ -371,7 +449,7 @@ include 'sidebar.php';
                         <input type="tel" name="no_tel_alt"
                                class="w-full bg-transparent border-0 border-b-2 border-slate-200 px-0 py-3 focus:border-emerald-500 focus:ring-0"
                                placeholder="01X-XXXXXXX" required inputmode="tel"
-                               value="<?php echo htmlspecialchars($_POST['no_tel_alt'] ?? ''); ?>">
+                               value="<?php echo htmlspecialchars($no_tel_alt_val); ?>">
                     </div>
                 </div>
             </div>
@@ -391,7 +469,7 @@ include 'sidebar.php';
                         <label for="input_sijil" id="zone_sijil"
                                class="flex flex-col items-center justify-center border-2 border-dashed border-slate-200 rounded-2xl p-8 cursor-pointer hover:border-emerald-400 hover:bg-emerald-50/50 transition-all">
                             <input type="file" name="dokumen_sijil" id="input_sijil"
-                                   accept=".jpg,.jpeg,.png,.pdf" required
+                                   accept=".jpg,.jpeg,.png,.pdf" <?php echo $edit_booking ? '' : 'required'; ?>
                                    class="hidden"
                                    onchange="handleUpload(this, 'zone_sijil', 'name_sijil', 'icon_sijil')">
                             <i id="icon_sijil" class="fas fa-file-medical text-3xl text-slate-300 mb-3"></i>
@@ -399,7 +477,12 @@ include 'sidebar.php';
                             <p class="text-xs text-slate-400 mt-1">JPG, PNG, PDF — Max 5MB</p>
                             <p id="name_sijil" class="text-xs font-bold text-emerald-700 mt-2 hidden"></p>
                         </label>
-                        <p class="text-xs text-slate-400 mt-2">Sijil Kematian</p>
+                        <p class="text-xs text-slate-400 mt-2">
+                            Sijil Kematian
+                            <?php if ($edit_booking && !empty($edit_booking['bukti_sijil'])): ?>
+                                <span class="block text-emerald-600 font-bold mt-1">Fail sedia ada: <a href="<?php echo htmlspecialchars($edit_booking['bukti_sijil']); ?>" target="_blank" class="underline"><?php echo basename($edit_booking['bukti_sijil']); ?></a></span>
+                            <?php endif; ?>
+                        </p>
                     </div>
 
                     <div>
@@ -409,7 +492,7 @@ include 'sidebar.php';
                         <label for="input_permit" id="zone_permit"
                                class="flex flex-col items-center justify-center border-2 border-dashed border-slate-200 rounded-2xl p-8 cursor-pointer hover:border-emerald-400 hover:bg-emerald-50/50 transition-all">
                             <input type="file" name="permit_polis" id="input_permit"
-                                   accept=".jpg,.jpeg,.png,.pdf" required
+                                   accept=".jpg,.jpeg,.png,.pdf" <?php echo $edit_booking ? '' : 'required'; ?>
                                    class="hidden"
                                    onchange="handleUpload(this, 'zone_permit', 'name_permit', 'icon_permit')">
                             <i id="icon_permit" class="fas fa-shield-halved text-3xl text-slate-300 mb-3"></i>
@@ -417,7 +500,12 @@ include 'sidebar.php';
                             <p class="text-xs text-slate-400 mt-1">JPG, PNG, PDF — Max 5MB</p>
                             <p id="name_permit" class="text-xs font-bold text-emerald-700 mt-2 hidden"></p>
                         </label>
-                        <p class="text-xs text-slate-400 mt-2">Permit Polis</p>
+                        <p class="text-xs text-slate-400 mt-2">
+                            Permit Polis
+                            <?php if ($edit_booking && !empty($edit_booking['permit_polis'])): ?>
+                                <span class="block text-emerald-600 font-bold mt-1">Fail sedia ada: <a href="<?php echo htmlspecialchars($edit_booking['permit_polis']); ?>" target="_blank" class="underline"><?php echo basename($edit_booking['permit_polis']); ?></a></span>
+                            <?php endif; ?>
+                        </p>
                     </div>
                 </div>
             </div>
@@ -427,12 +515,12 @@ include 'sidebar.php';
                 <label class="block text-xs font-semibold text-emerald-700 uppercase tracking-wider mb-3">Catatan Tambahan</label>
                 <textarea name="catatan" rows="3"
                           class="w-full bg-slate-50 border-0 border-b-2 border-slate-200 p-4 focus:ring-0 rounded-t-xl"
-                          placeholder="Permintaan khas jika ada..."><?php echo htmlspecialchars($_POST['catatan'] ?? ''); ?></textarea>
+                          placeholder="Permintaan khas jika ada..."><?php echo htmlspecialchars($catatan_val); ?></textarea>
             </div>
 
             <button type="submit" name="submit_booking" id="submitBtn"
                     class="w-full bg-gradient-to-r from-emerald-600 to-emerald-700 text-white font-bold py-4 rounded-2xl shadow-lg hover:shadow-xl transition-all">
-                Teruskan ke Pembayaran
+                <?php echo $edit_booking ? 'Kemaskini & Hantar Semula' : 'Teruskan ke Pembayaran'; ?>
             </button>
         </form>
     </div>

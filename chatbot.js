@@ -38,16 +38,53 @@ document.addEventListener("DOMContentLoaded", () => {
             border: 2px solid rgba(255, 255, 255, 0.2);
             position: relative;
             pointer-events: auto;
+            animation: chat-wiggle 6s ease-in-out infinite;
+        }
+
+        .chat-trigger-btn::before {
+            content: '';
+            position: absolute;
+            top: -2px; left: -2px; right: -2px; bottom: -2px;
+            border-radius: 50%;
+            background: rgba(16, 185, 129, 0.4);
+            z-index: -1;
+            animation: chat-ping 3s cubic-bezier(0.25, 0, 0, 1) infinite;
+        }
+
+        @keyframes chat-ping {
+            0% { transform: scale(1); opacity: 0.8; }
+            100% { transform: scale(1.6); opacity: 0; }
+        }
+
+        @keyframes chat-wiggle {
+            0%, 90%, 100% { transform: rotate(0) scale(1); }
+            92% { transform: rotate(-8deg) scale(1.05); }
+            94% { transform: rotate(8deg) scale(1.05); }
+            96% { transform: rotate(-6deg) scale(1.05); }
+            98% { transform: rotate(6deg) scale(1.05); }
         }
 
         .chat-trigger-btn:hover {
-            transform: scale(1.1) rotate(5deg);
+            transform: scale(1.1) rotate(5deg) !important;
             box-shadow: 0 15px 30px rgba(6, 78, 59, 0.4);
+            animation: none; /* Disable wiggle on hover */
+        }
+
+        .chat-trigger-btn:hover::before {
+            display: none; /* Disable ping on hover */
         }
 
         .chat-trigger-btn i {
             font-size: 24px;
             transition: transform 0.3s ease;
+        }
+
+        .chat-trigger-btn.active {
+            animation: none; /* Disable animation when chat is open */
+        }
+
+        .chat-trigger-btn.active::before {
+            display: none; /* Disable ping when active */
         }
 
         .chat-trigger-btn.active i {
@@ -330,23 +367,32 @@ document.addEventListener("DOMContentLoaded", () => {
             100% { transform: scale(1); }
         }
 
-        .send-btn {
-            background-color: #064e3b;
-            color: #ffffff;
-            box-shadow: 0 4px 10px rgba(6, 78, 59, 0.2);
+        #smartgrave-chatbot .send-btn {
+            background-color: #064e3b !important;
+            color: #ffffff !important;
+            box-shadow: 0 4px 10px rgba(6, 78, 59, 0.2) !important;
         }
 
-        .send-btn:hover {
-            background-color: #042f24;
-            transform: scale(1.05);
+        #smartgrave-chatbot .send-btn i {
+            color: #ffffff !important;
         }
 
-        .send-btn:disabled {
-            background-color: #cbd5e1;
-            color: #94a3b8;
-            box-shadow: none;
-            cursor: not-allowed;
-            transform: none;
+        #smartgrave-chatbot .send-btn:hover {
+            background-color: #042f24 !important;
+            color: #ffffff !important;
+            transform: scale(1.05) !important;
+        }
+
+        #smartgrave-chatbot .send-btn:disabled {
+            background-color: #cbd5e1 !important;
+            color: #94a3b8 !important;
+            box-shadow: none !important;
+            cursor: not-allowed !important;
+            transform: none !important;
+        }
+
+        #smartgrave-chatbot .send-btn:disabled i {
+            color: #94a3b8 !important;
         }
 
         /* Typing indicator */
@@ -418,7 +464,8 @@ document.addEventListener("DOMContentLoaded", () => {
                     <div class="flex items-start gap-2 my-1"><span class="text-emerald-600 mt-1.5 text-xs"><i class="fas fa-circle"></i></span><div>Tanya cara daftar khairat kematian</div></div>
                     <div class="flex items-start gap-2 my-1"><span class="text-emerald-600 mt-1.5 text-xs"><i class="fas fa-circle"></i></span><div>Minta panduan adab ziarah kubur</div></div>
                     <div class="flex items-start gap-2 my-1"><span class="text-emerald-600 mt-1.5 text-xs"><i class="fas fa-circle"></i></span><div>Tanya cara cari lokasi pusara</div></div>
-                    <div class="flex items-start gap-2 my-1"><span class="text-emerald-600 mt-1.5 text-xs"><i class="fas fa-circle"></i></span><div>Minta saya mainkan Surah Al-Fatihah</div></div><br>
+                    <div class="flex items-start gap-2 my-1"><span class="text-emerald-600 mt-1.5 text-xs"><i class="fas fa-circle"></i></span><div>Minta saya mainkan Surah Al-Fatihah</div></div>
+                    <div class="flex items-start gap-2 my-1"><span class="text-emerald-600 mt-1.5 text-xs"><i class="fas fa-circle"></i></span><div><a href="https://wa.me/601126923772?text=Saya%20perlukan%20bantuan%20mengenai%20SmartGrave" target="_blank" style="color: #059669; font-weight: bold; text-decoration: underline;"><i class="fab fa-whatsapp"></i> Hubungi Admin SmartGrave</a></div></div><br>
                     <em>(Klik butang 🎙️ untuk bercakap terus dengan saya!)</em>
                 </div>
             </div>

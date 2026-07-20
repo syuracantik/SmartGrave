@@ -219,6 +219,19 @@ include 'sidebar.php';
         </div>
         
         <div class="p-8 lg:p-12">
+            <!-- Success Notification Alert -->
+            <?php if (isset($_GET['edit_success'])): ?>
+                <div class="p-6 bg-emerald-50 border-l-4 border-emerald-500 rounded-2xl mb-8 flex items-start space-x-4 shadow-sm">
+                    <div class="bg-emerald-100 p-3 rounded-xl text-emerald-600">
+                        <i class="fas fa-check-circle text-2xl"></i>
+                    </div>
+                    <div class="flex-1">
+                        <h4 class="font-bold text-emerald-950 text-base">Permohonan Berjaya Dikemaskini</h4>
+                        <p class="text-sm text-emerald-800 mt-1">Permohonan anda telah berjaya dikemaskini dan dihantar semula untuk kelulusan pentadbir.</p>
+                    </div>
+                </div>
+            <?php endif; ?>
+
             <!-- Rejection Comments Card -->
             <?php if ($status_kod == -1): ?>
                 <div class="p-6 bg-red-50 border-l-4 border-red-500 rounded-2xl mb-8 flex items-start space-x-4 shadow-sm">
@@ -231,7 +244,13 @@ include 'sidebar.php';
                         <div class="mt-3 p-4 bg-white rounded-xl border border-red-100 text-sm font-semibold text-red-900 italic">
                             "<?php echo htmlspecialchars($app['ulasan_admin'] ?? 'Tiada ulasan dinyatakan.'); ?>"
                         </div>
-                        <p class="text-xs text-red-500 mt-3">*Sila hubungi pihak pentadbir Masjid Kariah Bangi untuk maklumat lanjut atau buat permohonan semula.</p>
+                        <p class="text-xs text-red-500 mt-3">*Sila kemaskini maklumat di bawah atau hubungi pihak pentadbir untuk maklumat lanjut.</p>
+                        <div class="mt-4">
+                            <a href="booking.php?edit_tempahan_id=<?php echo $app['id']; ?>" 
+                               class="inline-flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white font-bold py-2.5 px-5 rounded-xl text-sm shadow-md transition-all">
+                                <i class="fas fa-edit"></i> Kemaskini & Hantar Semula
+                            </a>
+                        </div>
                     </div>
                 </div>
             <?php endif; ?>

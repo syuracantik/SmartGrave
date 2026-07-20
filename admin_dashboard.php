@@ -135,10 +135,18 @@ $lotTersedia = max(0, $lotJumlah - $lotPenuh);
 
 $peratusGuna = round(($lotPenuh / $lotJumlah) * 100);
 
-$stmt = $pdo->query("SELECT COUNT(*) FROM tempahan WHERE status_proses IN ('Pending', 'Bayaran Berjaya')");
+$stmt = $pdo->query("SELECT COUNT(*) FROM tempahan WHERE status_proses = 'Bayaran Berjaya'");
 $tempahanPending = $stmt->fetchColumn();
 
-$stmt = $pdo->query("SELECT COUNT(*) FROM daftar_khairat WHERE status_yuran = 'Dibayar'");
+$stmt = $pdo->query("
+    SELECT COUNT(*) FROM daftar_khairat dk
+    WHERE dk.status_yuran = 'Dibayar'
+      AND EXTRACT(YEAR FROM dk.tarikh_daftar) = EXTRACT(YEAR FROM CURRENT_DATE)
+      AND NOT EXISTS (
+          SELECT 1 FROM maklumat_jenazah mj 
+          WHERE REPLACE(mj.no_ic, '-', '') = REPLACE(dk.no_ic, '-', '')
+      )
+");
 $ahliAktif = $stmt->fetchColumn();
 
 $stmt = $pdo->query("
@@ -156,10 +164,10 @@ $page   = max(1, (int)($_GET['page'] ?? 1));
 $perPage = 10;
 $offset  = ($page - 1) * $perPage;
 
-$whereClause = "WHERE NOT (t.status_proses = 'Tolak' AND t.updated_at < NOW() - INTERVAL '24 hours') AND NOT (t.status_proses = 'Lulus' AND lp.no_lot IS NOT NULL AND t.updated_at < NOW() - INTERVAL '24 hours')";
+$whereClause = "WHERE t.status_proses != 'Pending' AND NOT (t.status_proses = 'Tolak' AND t.updated_at < NOW() - INTERVAL '24 hours') AND NOT (t.status_proses = 'Lulus' AND lp.no_lot IS NOT NULL AND t.updated_at < NOW() - INTERVAL '24 hours')";
 $params      = [];
 if ($filter === 'pending') {
-    $whereClause = "WHERE t.status_proses IN ('Pending', 'Bayaran Berjaya')";
+    $whereClause = "WHERE t.status_proses = 'Bayaran Berjaya'";
 } elseif ($filter === 'lulus') {
     $whereClause = "WHERE t.status_proses = 'Lulus' AND (lp.no_lot IS NULL OR t.updated_at >= NOW() - INTERVAL '24 hours')";
 } elseif ($filter === 'tolak') {
@@ -688,7 +696,7 @@ require_once 'header.php';
                                         <i class="fab fa-whatsapp text-sm"></i>
                                     </a>
 
-                                    <?php if (in_array($s, ['Pending', 'Bayaran Berjaya'])): ?>
+                                    <?php if ($s === 'Bayaran Berjaya'): ?>
                                     <!-- Lulus -->
                                     <button
                                         class="icon-btn icon-btn-lulus"

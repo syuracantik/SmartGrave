@@ -9,45 +9,34 @@ $step = isset($_SESSION['reset_step']) ? $_SESSION['reset_step'] : 1;
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
     if (isset($_POST['step1'])) {
         $identity = trim($_POST['identity']);
-        if (empty($identity)) {
-            $error = "Sila masukkan ID Pengguna atau Emel anda.";
+        $ic_number = preg_replace('/[^0-9]/', '', $_POST['ic_number']);
+        
+        if (empty($identity) || empty($ic_number)) {
+            $error = "Sila masukkan semua maklumat yang diperlukan.";
         } else {
             try {
-                $stmt = $pdo->prepare("SELECT id, username, email, full_name FROM users WHERE username = ? OR email = ?");
-                $stmt->execute([$identity, $identity]);
+                $stmt = $pdo->prepare("
+                    SELECT id, username, email 
+                    FROM users 
+                    WHERE (username = ? OR email = ?) 
+                      AND REPLACE(ic_number, '-', '') = ?
+                ");
+                $stmt->execute([$identity, $identity, $ic_number]);
                 $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
                 if ($user) {
-                    $otp = strval(rand(100000, 999999));
                     $_SESSION['reset_user_id'] = $user['id'];
                     $_SESSION['reset_username'] = $user['username'];
-                    $_SESSION['reset_email'] = $user['email'];
-                    $_SESSION['reset_otp'] = $otp;
-                    $_SESSION['reset_otp_expiry'] = time() + 300; // 5 min
                     $_SESSION['reset_step'] = 2;
                     $step = 2;
                 } else {
-                    $error = "ID Pengguna atau Emel tidak ditemui.";
+                    $error = "ID Pengguna/Emel atau No. Kad Pengenalan tidak sepadan.";
                 }
             } catch (PDOException $e) {
                 $error = "Ralat pangkalan data: " . $e->getMessage();
             }
         }
     } elseif (isset($_POST['step2'])) {
-        $otp_input = trim($_POST['otp']);
-        if (empty($otp_input)) {
-            $error = "Sila masukkan kod keselamatan 6-digit.";
-        } elseif ($otp_input !== ($_SESSION['reset_otp'] ?? '')) {
-            $error = "Kod keselamatan salah.";
-        } elseif (time() > ($_SESSION['reset_otp_expiry'] ?? 0)) {
-            $error = "Kod keselamatan telah tamat tempoh. Sila minta kod baru.";
-            $_SESSION['reset_step'] = 1;
-            $step = 1;
-        } else {
-            $_SESSION['reset_step'] = 3;
-            $step = 3;
-        }
-    } elseif (isset($_POST['step3'])) {
         $password = $_POST['password'];
         $password_confirm = $_POST['password_confirm'];
 
@@ -66,9 +55,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 // Clear session
                 unset($_SESSION['reset_user_id']);
                 unset($_SESSION['reset_username']);
-                unset($_SESSION['reset_email']);
-                unset($_SESSION['reset_otp']);
-                unset($_SESSION['reset_otp_expiry']);
                 unset($_SESSION['reset_step']);
 
                 header("Location: login.php?reset=success");
@@ -78,12 +64,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             }
         }
     } elseif (isset($_POST['cancel'])) {
-        // Reset recovery flow
         unset($_SESSION['reset_user_id']);
         unset($_SESSION['reset_username']);
-        unset($_SESSION['reset_email']);
-        unset($_SESSION['reset_otp']);
-        unset($_SESSION['reset_otp_expiry']);
         unset($_SESSION['reset_step']);
         header("Location: login.php");
         exit();
@@ -132,21 +114,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         </div>
 
         <div class="px-10 pb-10">
-            <!-- Simulated Message for OTP -->
-            <?php if ($step === 2 && isset($_SESSION['reset_otp'])): ?>
-                <div class="p-4 bg-amber-50 border-l-4 border-amber-500 rounded-xl mb-6 shadow-sm">
-                    <p class="text-[11px] text-amber-800 font-bold leading-normal">
-                        <i class="fas fa-mobile-alt mr-1"></i> [SIMULASI PORTAL - PERCUMA]
-                    </p>
-                    <p class="text-[11px] text-amber-700 mt-1 leading-normal">
-                        Kod keselamatan telah dihantar ke Emel / WhatsApp anda. Masukkan kod ini untuk pengesahan:
-                    </p>
-                    <p class="text-lg font-black text-amber-900 mt-2 tracking-widest text-center bg-white py-2 rounded-lg border border-amber-100">
-                        <?php echo htmlspecialchars($_SESSION['reset_otp']); ?>
-                    </p>
-                </div>
-            <?php endif; ?>
-
             <?php if (!empty($error)): ?>
                 <div class="p-4 bg-red-50 border-l-4 border-red-500 rounded-xl mb-6">
                     <p class="text-red-800 text-xs font-semibold flex items-center">
@@ -155,7 +122,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 </div>
             <?php endif; ?>
 
-            <!-- STEP 1: REQUEST OTP -->
+            <!-- STEP 1: VERIFY IDENTITY -->
             <?php if ($step === 1): ?>
                 <form method="POST" action="forgot_password.php" class="space-y-6">
                     <div>
@@ -165,43 +132,29 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                                 <i class="fas fa-user-circle text-lg"></i>
                             </span>
                             <input type="text" name="identity" placeholder="Masukkan ID Pengguna atau Emel" 
-                                class="w-full pl-12 pr-4 py-4 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none text-sm font-medium" required>
+                                class="w-full pl-12 pr-4 py-4 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none text-sm font-medium" required autocomplete="off">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-[11px] font-bold text-emerald-900 uppercase mb-2 ml-1 opacity-70">No. Kad Pengenalan (IC)</label>
+                        <div class="relative group">
+                            <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-gray-400">
+                                <i class="fas fa-id-card text-lg"></i>
+                            </span>
+                            <input type="text" id="icNumber" name="ic_number" placeholder="000000-00-0000" maxlength="14"
+                                class="w-full pl-12 pr-4 py-4 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none text-sm font-medium" required autocomplete="off" inputmode="numeric">
                         </div>
                     </div>
 
                     <button type="submit" name="step1" class="w-full bg-emerald-800 text-white py-4 rounded-xl font-bold text-sm hover:bg-emerald-700 transition shadow-lg flex items-center justify-center space-x-3 tracking-wide">
-                        <span>HANTAR KOD KESELAMATAN</span>
+                        <span>SAHKAN IDENTITI</span>
                         <i class="fas fa-chevron-right text-[10px]"></i>
                     </button>
                 </form>
 
-            <!-- STEP 2: VERIFY OTP -->
+            <!-- STEP 2: RESET PASSWORD -->
             <?php elseif ($step === 2): ?>
-                <form method="POST" action="forgot_password.php" class="space-y-6">
-                    <div>
-                        <label class="block text-[11px] font-bold text-emerald-900 uppercase mb-2 ml-1 opacity-70">Masukkan Kod Keselamatan</label>
-                        <div class="relative group">
-                            <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-gray-400">
-                                <i class="fas fa-shield-alt text-lg"></i>
-                            </span>
-                            <input type="text" name="otp" placeholder="6-digit kod keselamatan" maxlength="6"
-                                class="w-full pl-12 pr-4 py-4 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none text-sm font-semibold tracking-[0.3em] text-center" required>
-                        </div>
-                    </div>
-
-                    <div class="flex gap-4">
-                        <button type="submit" name="cancel" class="flex-1 bg-gray-100 text-gray-700 py-4 rounded-xl font-bold text-sm hover:bg-gray-200 transition">
-                            BATAL
-                        </button>
-                        <button type="submit" name="step2" class="flex-[2] bg-emerald-800 text-white py-4 rounded-xl font-bold text-sm hover:bg-emerald-700 transition shadow-lg flex items-center justify-center space-x-3">
-                            <span>SAHKAN KOD</span>
-                            <i class="fas fa-check text-xs"></i>
-                        </button>
-                    </div>
-                </form>
-
-            <!-- STEP 3: RESET PASSWORD -->
-            <?php elseif ($step === 3): ?>
                 <form method="POST" action="forgot_password.php" class="space-y-6">
                     <div class="space-y-4">
                         <!-- Password -->
@@ -227,10 +180,15 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                         </div>
                     </div>
 
-                    <button type="submit" name="step3" class="w-full bg-emerald-800 text-white py-4 rounded-xl font-bold text-sm hover:bg-emerald-700 transition shadow-lg flex items-center justify-center space-x-3 tracking-wide">
-                        <span>KEMASKINI KATA LALUAN</span>
-                        <i class="fas fa-save text-xs"></i>
-                    </button>
+                    <div class="flex gap-4">
+                        <button type="submit" name="cancel" class="flex-1 bg-gray-100 text-gray-700 py-4 rounded-xl font-bold text-sm hover:bg-gray-200 transition">
+                            BATAL
+                        </button>
+                        <button type="submit" name="step2" class="flex-[2] bg-emerald-800 text-white py-4 rounded-xl font-bold text-sm hover:bg-emerald-700 transition shadow-lg flex items-center justify-center space-x-3">
+                            <span>KEMASKINI KATA LALUAN</span>
+                            <i class="fas fa-save text-xs"></i>
+                        </button>
+                    </div>
                 </form>
             <?php endif; ?>
         </div>
@@ -244,6 +202,17 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             passwordInput.setAttribute('type', type);
             eyeIcon.classList.toggle('fa-eye');
             eyeIcon.classList.toggle('fa-eye-slash');
+        }
+
+        const icInput = document.getElementById('icNumber');
+        if (icInput) {
+            icInput.addEventListener('input', function () {
+                let digits = this.value.replace(/\D/g, '').slice(0, 12);
+                let formatted = digits;
+                if (digits.length > 6) formatted = digits.slice(0,6) + '-' + digits.slice(6);
+                if (digits.length > 8) formatted = digits.slice(0,6) + '-' + digits.slice(6,8) + '-' + digits.slice(8);
+                this.value = formatted;
+            });
         }
     </script>
 </body>

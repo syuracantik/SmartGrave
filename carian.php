@@ -23,19 +23,7 @@ foreach ($mock_graves as $mg) {
 try {
     include 'db.php';
     if (isset($pdo)) {
-        // Upgrade table with guide image columns if not exists
-        try {
-            $pdo->exec("ALTER TABLE lot_pusara ADD COLUMN IF NOT EXISTS gambar_kiri VARCHAR(255)");
-            $pdo->exec("ALTER TABLE lot_pusara ADD COLUMN IF NOT EXISTS gambar_kanan VARCHAR(255)");
-            $pdo->exec("ALTER TABLE lot_pusara ADD COLUMN IF NOT EXISTS gambar_penanda VARCHAR(255)");
-            $pdo->exec("ALTER TABLE lot_pusara ADD COLUMN IF NOT EXISTS gambar_kiri_desc VARCHAR(255)");
-            $pdo->exec("ALTER TABLE lot_pusara ADD COLUMN IF NOT EXISTS gambar_kanan_desc VARCHAR(255)");
-            $pdo->exec("ALTER TABLE lot_pusara ADD COLUMN IF NOT EXISTS gambar_penanda_desc VARCHAR(255)");
-            
-            // Kemas kini check constraint status_lot untuk membenarkan status Mendap dan Tidak Sesuai
-            $pdo->exec("ALTER TABLE lot_pusara DROP CONSTRAINT IF EXISTS lot_pusara_status_lot_check");
-            $pdo->exec("ALTER TABLE lot_pusara ADD CONSTRAINT lot_pusara_status_lot_check CHECK (status_lot IN ('Tersedia', 'Ditetapkan', 'Penuh', 'Mendap', 'Tidak Sesuai'))");
-        } catch (Exception $ex) {}
+        // Schema migrations for image columns and constraints are already applied.
 
         $stmt = $pdo->query("
             SELECT lp.no_lot AS id, lp.status_lot, j.nama_jenazah AS nama, j.no_ic AS ic, j.tarikh_wafat AS mati,
@@ -53,14 +41,30 @@ try {
                 $mati = $g['mati'] ? date('d/m/Y', strtotime($g['mati'])) : '—';
                 $ic = preg_replace('/[^0-9]/', '', $g['ic']);
                 $lahir = '—';
+                $umur = '—';
                 if (strlen($ic) === 12) {
                     $year_part = substr($ic, 0, 2);
                     $month_part = substr($ic, 2, 2);
                     $day_part = substr($ic, 4, 2);
                     $current_year = intval(date('Y'));
-                    $century = ($year_part + 2000 > $current_year) ? 1900 : 2000;
+                    $death_year = !empty($g['mati']) ? intval(date('Y', strtotime($g['mati']))) : $current_year;
+                    $century = ($year_part + 2000 > $death_year) ? 1900 : 2000;
                     $year = $century + intval($year_part);
                     $lahir = "$day_part/$month_part/$year";
+                    
+                    // Hitung umur semasa meninggal
+                    if (!empty($g['mati'])) {
+                        try {
+                            $birthDate = new DateTime("$year-$month_part-$day_part");
+                            $deathDate = new DateTime($g['mati']);
+                            $diff = $birthDate->diff($deathDate);
+                            $umur = $diff->y . " Tahun";
+                        } catch (Exception $e) {
+                            // Fallback jika tarikh salah
+                            $death_year = intval(date('Y', strtotime($g['mati'])));
+                            $umur = max(0, $death_year - $year) . " Tahun";
+                        }
+                    }
                 }
                 $graves_map[$id] = [
                     'id' => $id,
@@ -69,6 +73,7 @@ try {
                     'ic' => $g['ic'],
                     'lahir' => $lahir,
                     'mati' => $mati,
+                    'umur' => $umur,
                     'zon' => $zon,
                     'gambar_kiri' => $g['gambar_kiri'] ?? '',
                     'gambar_kanan' => $g['gambar_kanan'] ?? '',
@@ -1554,7 +1559,7 @@ function makePopup(d) {
   const zl=isA?'#eff6ff':'#f5f3ff';
   const liveDistHTML = userLatLng
     ? `<div class="p-live-dist"><div class="pld-dot"></div><span class="pld-lbl">Jarak dari anda:&nbsp;</span><span class="pld-val" id="popup-live-dist">${fmtDist(haversineMeters(userLatLng.lat,userLatLng.lng,d.lat,d.lng))}</span></div>`
-    : `<div class="p-live-dist" style="opacity:.5"><div class="pld-dot" style="background:#aaa;animation:none"></div><span class="pld-lbl">GPS diperlukan untuk jarak sebenar</span></div>`;
+    : '';
   
   const imgsHTML = getGraveImagesHTML(d, 'p-img-ph');
   
@@ -1571,6 +1576,7 @@ function makePopup(d) {
       <div class="pg">
         <div class="pf"><div class="pf-l">Tarikh Lahir</div><div class="pf-v">${d.lahir}</div></div>
         <div class="pf"><div class="pf-l">Tarikh Wafat</div><div class="pf-v">${d.mati}</div></div>
+        <div class="pf"><div class="pf-l">Umur (Wafat)</div><div class="pf-v">${d.umur}</div></div>
         <div class="pf"><div class="pf-l">Zon</div><div class="pf-v" style="color:${zc}">Zon ${d.zon}</div></div>
       </div>
       ${liveDistHTML}
@@ -1619,6 +1625,7 @@ function bearing(a,b) {
 let _walkInterval=null,_navLineLayer=null,_arrowLayer=null,_walkMkr=null,_startMkr=null,_destMkr=null;
 
 function startNav(id) {
+  startGPS();
   const d = GRAVES.find(g=>g.id===id);
   if(!d||!d.lat) return;
   _currentNavId=id;
@@ -1681,53 +1688,66 @@ function startNav(id) {
 
   // Row calculation for display details
   const num_id = parseInt(d.id.substring(1), 10);
-  const z_cols = isC ? 17 : ZONE_COLS;
+  let z_cols = 13;
+  let rows_total = ZONE_ROWS; // 26
+  if (d.zon === 'B') {
+      z_cols = 17;
+      rows_total = 21;
+  } else if (d.zon === 'C') {
+      z_cols = 27;
+      rows_total = 5;
+  }
   const col_idx = (num_id - 1) % z_cols;
   const row_idx = Math.floor((num_id - 1) / z_cols);
-  const rows_total = isC ? 5 : (d.zon === 'B' ? 15 : ZONE_ROWS);
+
+  let rows_passed = rows_total - 1 - row_idx;
+  if (d.zon === 'B') {
+      // Add the 5 rows of Zone C stacked above Zone B on the East side
+      rows_passed += 5;
+  }
+
+  let det1 = `Jalan terus ke Selatan melepasi ${rows_passed} baris kubur`;
+  if (rows_passed === 0) {
+      det1 = `Jalan terus ke Selatan dan bersedia untuk belok terus ke barisan pertama`;
+  }
 
   steps.push({
     icon: '🚪',
     act: 'Pintu Masuk Utama',
-    det: `Jalan terus ke Selatan melepasi ${rows_total - 1 - row_idx} baris kubur`,
+    det: det1,
     dist: dist1 + ' m',
     cls: 's-first'
   });
 
   const dist2 = Math.round(haversineMeters(row_gap_lat,corridorLng,row_gap_lat,d.lng));
-  totalDist += dist2;
-  const turnDir = d.lng < corridorLng ? 'kiri' : 'kanan';
+  const dist3 = Math.round(haversineMeters(row_gap_lat,d.lng,d.lat,d.lng));
+  const row_walk_dist = dist2 + dist3;
+  totalDist = dist1 + row_walk_dist;
+  
+  // Walking south down the corridor, Zone A (West) is on the RIGHT (Kanan), Zone B/C (East) is on the LEFT (Kiri)
+  const turnDir = d.lng < corridorLng ? 'kanan' : 'kiri';
   let num_lots_to_walk = 0;
   if (d.zon === 'A') {
-      num_lots_to_walk = (ZONE_COLS - 1) - col_idx;
+      num_lots_to_walk = (z_cols - 1) - col_idx;
   } else {
       num_lots_to_walk = col_idx;
   }
 
   steps.push({
-    icon: turnDir==='kiri'?'⬅️':'➡️',
+    icon: turnDir === 'kiri' ? '⬅️' : '➡️',
     act: 'Belok ' + (turnDir === 'kiri' ? 'Kiri' : 'Kanan'),
     det: `Belok masuk ke lorong barisan melintasi ${num_lots_to_walk} lot kubur`,
-    dist: dist2 + ' m',
+    dist: row_walk_dist + ' m',
     cls: ''
   });
 
-  const dist3 = Math.round(haversineMeters(row_gap_lat,d.lng,d.lat,d.lng));
-  totalDist += dist3;
-  const enterDir = d.zon === 'A' ? 'kanan' : 'kiri';
-
-  steps.push({
-    icon: enterDir==='kanan'?'➡️':'⬅️',
-    act: 'Masuk ke Lot',
-    det: `Langkah ke lot destinasi di Barisan ke-${row_idx + 1}`,
-    dist: dist3 + ' m',
-    cls: ''
-  });
+  // Grave is on the Right (Kanan) for Zone A (facing West), Left (Kiri) for Zone B/C (facing East)
+  const sideDir = d.zon === 'A' ? 'kanan' : 'kiri';
 
   steps.push({
     icon: '📍',
     act: 'Destinasi Tiba',
-    det: `Lot ${d.id} (${d.nama}) berada di hadapan anda`,
+    det: `Lot ${d.id} (${d.nama}) berada di sebelah ${sideDir} anda`,
     dist: totalDist + ' m',
     cls: 's-dest'
   });
@@ -1894,7 +1914,7 @@ function doSearch() {
   list.innerHTML=res.map(d=>{
     const distHTML=userLatLng
       ?`<div class="gc-dist" id="dist-${d.id}"><i class="fas fa-location-arrow"></i>📍 ${fmtDist(haversineMeters(userLatLng.lat,userLatLng.lng,d.lat,d.lng))} dari anda</div>`
-      :`<div class="gc-dist" id="dist-${d.id}" style="opacity:.4"><i class="fas fa-location-arrow"></i>Mendapatkan jarak...</div>`;
+      :'';
     const gcImgsHTML = getGraveImagesHTML(d, 'gc-img-placeholder');
     return `
     <div class="gcard z${d.zon.toLowerCase()}" id="gc-${d.id}" onclick="focusGrave('${d.id}')">
@@ -1903,7 +1923,7 @@ function doSearch() {
         <span class="gc-lot">${d.id}</span>
       </div>
       <div class="gc-name">${d.nama}</div>
-      <div class="gc-meta">Lahir: ${d.lahir} · Wafat: ${d.mati}</div>
+      <div class="gc-meta">Lahir: ${d.lahir} · Wafat: ${d.mati} · Umur: ${d.umur}</div>
       ${gcImgsHTML ? `<div class="gc-divider"></div>${gcImgsHTML}` : ''}
       <div class="gc-divider"></div>
       ${distHTML}
@@ -1961,7 +1981,6 @@ drawAllLots();
 drawLandmarks();
 updateHeaderCounts();
 doSearch();
-startGPS();
 
 setInterval(()=>{if(userLatLng)updateDistances();},5000);
 </script>

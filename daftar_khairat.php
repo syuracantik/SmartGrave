@@ -2,6 +2,36 @@
 session_start();
 require_once 'db.php';
 
+// AJAX Check: Semak jika IC sudah didaftarkan pada tahun semasa
+if (isset($_GET['check_ic'])) {
+    header('Content-Type: application/json');
+    $ic = preg_replace('/[^0-9]/', '', $_GET['check_ic']);
+    $registered = false;
+    $name = "";
+    
+    try {
+        $stmt = $pdo->prepare("
+            SELECT nama_ahli 
+            FROM daftar_khairat 
+            WHERE no_ic = ? 
+              AND status_yuran = 'Dibayar'
+              AND EXTRACT(YEAR FROM tarikh_daftar) = EXTRACT(YEAR FROM NOW())
+            LIMIT 1
+        ");
+        $stmt->execute([$ic]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        if ($row) {
+            $registered = true;
+            $name = $row['nama_ahli'];
+        }
+    } catch (Exception $e) {
+        // Abaikan ralat
+    }
+    
+    echo json_encode(['registered' => $registered, 'name' => $name]);
+    exit;
+}
+
 if (!isset($_SESSION['user_id'])) {
     header("Location: login.php");
     exit();
@@ -184,19 +214,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_khairat'])) {
 // FETCH SENARAI AHLI — FK dah tukar: id_waris → user_id
 // ============================================================
 $stmtAhli = $pdo->prepare("
-    SELECT *
-    FROM daftar_khairat
-    WHERE user_id = ?
-    ORDER BY tarikh_daftar DESC
+    SELECT dk.*,
+           EXISTS (
+               SELECT 1 FROM maklumat_jenazah mj 
+               WHERE REPLACE(mj.no_ic, '-', '') = REPLACE(dk.no_ic, '-', '')
+           ) AS telah_meninggal
+    FROM daftar_khairat dk
+    WHERE dk.user_id = ?
+    ORDER BY telah_meninggal ASC, dk.tarikh_daftar DESC
 ");
 $stmtAhli->execute([$user_id]);
 $senarai_ahli = $stmtAhli->fetchAll(PDO::FETCH_ASSOC);
 
 $jumlah_aktif   = 0;
 $jumlah_tunggak = 0;
-foreach ($senarai_ahli as $a) {
-    if ($a['status_yuran'] === STATUS_DIBAYAR) $jumlah_aktif++;
-    if ($a['status_yuran'] !== STATUS_DIBAYAR) $jumlah_tunggak++;
+$current_year   = (int)date('Y');
+
+foreach ($senarai_ahli as $key => $a) {
+    $is_deceased = !empty($a['telah_meninggal']);
+    if ($is_deceased) {
+        // Deceased members are ignored from active/arrears status
+        continue;
+    }
+    
+    $reg_year = (int)date('Y', strtotime($a['tarikh_daftar']));
+    if ($a['status_yuran'] === STATUS_DIBAYAR && $reg_year === $current_year) {
+        $jumlah_aktif++;
+    } else {
+        $jumlah_tunggak++;
+        $senarai_ahli[$key]['status_yuran'] = STATUS_TUNGGAKAN;
+    }
 }
 ?>
 
@@ -695,6 +742,11 @@ textarea.form-control { resize: vertical; min-height: 100px; }
     background: var(--amber-50);
 }
 
+.member-card.deceased-member {
+    border-color: var(--red-100);
+    background: var(--red-50);
+}
+
 .member-top {
     display: flex;
     align-items: flex-start;
@@ -742,6 +794,11 @@ textarea.form-control { resize: vertical; min-height: 100px; }
 }
 
 .status-pill.belum {
+    background: var(--red-100);
+    color: var(--red-700);
+}
+
+.status-pill.deceased {
     background: var(--red-100);
     color: var(--red-700);
 }
@@ -1089,13 +1146,18 @@ textarea.form-control { resize: vertical; min-height: 100px; }
                         <?php foreach ($senarai_ahli as $ahli): ?>
 
                             <?php
-                            // DB only allows: 'Dibayar' or 'Tunggakan'
+                            $is_deceased = !empty($ahli['telah_meninggal']);
                             $statusClass = 'tunggak';
                             $statusLabel = 'Belum Bayar';
                             $statusIcon  = 'fa-clock';
                             $cardClass   = 'tunggak-member';
 
-                            if ($ahli['status_yuran'] === STATUS_DIBAYAR) {
+                            if ($is_deceased) {
+                                $statusClass = 'deceased';
+                                $statusLabel = 'Meninggal';
+                                $statusIcon  = 'fa-ribbon';
+                                $cardClass   = 'deceased-member';
+                            } elseif ($ahli['status_yuran'] === STATUS_DIBAYAR) {
                                 $statusClass = 'aktif';
                                 $statusLabel = 'Aktif';
                                 $statusIcon  = 'fa-check';
@@ -1140,7 +1202,9 @@ textarea.form-control { resize: vertical; min-height: 100px; }
                                     </div>
                                 </div>
 
-                                <?php if ($ahli['status_yuran'] !== STATUS_DIBAYAR): ?>
+                                <?php if ($is_deceased): ?>
+                                    <!-- No actions for deceased members -->
+                                <?php elseif ($ahli['status_yuran'] !== STATUS_DIBAYAR): ?>
                                     <div style="margin-top:.75rem; padding-top:.65rem; border-top: 1px solid rgba(0,0,0,.06); display:flex; justify-content:flex-end;">
                                         <a
                                             href="payment.php?type=khairat&khairat_id=<?php echo (int)$ahli['id']; ?>"
@@ -1222,8 +1286,24 @@ icInput.addEventListener('input', function () {
 
     const len = digits.length;
     if (len === 12) {
-        icHint.textContent = '✓ Nombor IC lengkap';
-        icHint.style.color = 'var(--green-700)';
+        icHint.textContent = '🔍 Menyemak pendaftaran...';
+        icHint.style.color = '#3b82f6';
+        
+        fetch(`daftar_khairat.php?check_ic=${digits}`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.registered) {
+                    icHint.innerHTML = `⚠️ Ahli dengan IC ini sudah berdaftar bagi tahun semasa (${data.name})`;
+                    icHint.style.color = '#ef4444';
+                } else {
+                    icHint.textContent = '✓ Sedia untuk berdaftar (Belum wujud bagi tahun semasa)';
+                    icHint.style.color = '#10b981';
+                }
+            })
+            .catch(err => {
+                icHint.textContent = '✓ Nombor IC lengkap';
+                icHint.style.color = '#10b981';
+            });
     } else {
         icHint.textContent = len + ' / 12 digit';
         icHint.style.color = 'var(--slate-400)';

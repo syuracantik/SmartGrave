@@ -22,19 +22,50 @@ if (empty(GEMINI_API_KEY)) {
 }
 
 try {
-    // 1. Fetch statistics
-    $khairat_aktif = $pdo->query("SELECT count(*) FROM daftar_khairat WHERE status_yuran = 'Dibayar'")->fetchColumn() ?: 0;
-    $tunggakan_khairat = $pdo->query("SELECT count(*) FROM daftar_khairat WHERE status_yuran = 'Tunggakan'")->fetchColumn() ?: 0;
+    // 1. Fetch statistics (Tahun Semasa & Masih Hidup sahaja)
+    $khairat_aktif = $pdo->query("
+        SELECT count(*) FROM daftar_khairat dk
+        WHERE dk.status_yuran = 'Dibayar'
+          AND EXTRACT(YEAR FROM dk.tarikh_daftar) = EXTRACT(YEAR FROM CURRENT_DATE)
+          AND NOT EXISTS (
+              SELECT 1 FROM maklumat_jenazah mj 
+              WHERE REPLACE(mj.no_ic, '-', '') = REPLACE(dk.no_ic, '-', '')
+          )
+    ")->fetchColumn() ?: 0;
+
+    $tunggakan_khairat = $pdo->query("
+        SELECT count(*) FROM daftar_khairat dk
+        WHERE dk.status_yuran = 'Tunggakan'
+          AND EXTRACT(YEAR FROM dk.tarikh_daftar) = EXTRACT(YEAR FROM CURRENT_DATE)
+          AND NOT EXISTS (
+              SELECT 1 FROM maklumat_jenazah mj 
+              WHERE REPLACE(mj.no_ic, '-', '') = REPLACE(dk.no_ic, '-', '')
+          )
+    ")->fetchColumn() ?: 0;
 
     $lot_stats = $pdo->query("SELECT status_lot, count(*) as jumlah FROM lot_pusara GROUP BY status_lot")->fetchAll(PDO::FETCH_KEY_PAIR);
     $lot_penuh = $lot_stats['Penuh'] ?? 0;
     $lot_tersedia = max(0, 830 - $lot_penuh);
 
-    // Demographics for predicted deaths
-    $stmt_ic = $pdo->query("SELECT no_ic FROM daftar_khairat WHERE status_yuran = 'Dibayar'");
+    // Infaq Tahun Semasa
+    $infaq_tahun_semasa = $pdo->query("
+        SELECT sum(jumlah) FROM infaq 
+        WHERE EXTRACT(YEAR FROM tarikh_transaksi) = EXTRACT(YEAR FROM CURRENT_DATE)
+    ")->fetchColumn() ?: 0;
+
+    // Demographics for predicted deaths (Tahun Semasa & Masih Hidup sahaja)
+    $stmt_ic = $pdo->query("
+        SELECT dk.no_ic FROM daftar_khairat dk
+        WHERE dk.status_yuran = 'Dibayar'
+          AND EXTRACT(YEAR FROM dk.tarikh_daftar) = EXTRACT(YEAR FROM CURRENT_DATE)
+          AND NOT EXISTS (
+              SELECT 1 FROM maklumat_jenazah mj 
+              WHERE REPLACE(mj.no_ic, '-', '') = REPLACE(dk.no_ic, '-', '')
+          )
+    ");
     $seniors = 0; // 60+
-    $adults = 0;  // 18-59
-    $youth = 0;   // <18
+    $adults = 0;  // 13-59
+    $youth = 0;   // <=12
     $total_members_with_ic = 0;
 
     if ($stmt_ic) {
@@ -49,7 +80,7 @@ try {
 
                 if ($age >= 60) {
                     $seniors++;
-                } elseif ($age >= 18) {
+                } elseif ($age >= 13) {
                     $adults++;
                 } else {
                     $youth++;
@@ -65,8 +96,40 @@ try {
         $youth = 12;
     }
 
-    $predicted_deaths = ($seniors * 0.038) + ($adults * 0.004) + ($youth * 0.001);
-    $predicted_deaths = round($predicted_deaths, 1);
+    // G. Ramalan Kematian berasaskan Purata Sejarah Sebenar (Tahun-Tahun Sebelum)
+    $current_year_api = (int)date('Y');
+    $start_year_api = $current_year_api - 4;
+    $years_data_api = [];
+    for ($y = $start_year_api; $y <= $current_year_api; $y++) {
+        $years_data_api[$y] = 0;
+    }
+
+    $death_trend_query_api = $pdo->prepare("
+        SELECT EXTRACT(YEAR FROM tarikh_wafat) as tahun, COUNT(*) as jumlah
+        FROM maklumat_jenazah
+        WHERE tarikh_wafat IS NOT NULL 
+          AND EXTRACT(YEAR FROM tarikh_wafat) >= ?
+          AND EXTRACT(YEAR FROM tarikh_wafat) <= ?
+        GROUP BY tahun
+        ORDER BY tahun ASC
+    ");
+    $death_trend_query_api->execute([$start_year_api, $current_year_api]);
+    while ($row = $death_trend_query_api->fetch(PDO::FETCH_ASSOC)) {
+        $years_data_api[(int)$row['tahun']] = (int)$row['jumlah'];
+    }
+
+    $completed_years_sum = 0;
+    $completed_years_count = 0;
+    for ($y = $start_year_api; $y < $current_year_api; $y++) {
+        $completed_years_sum += $years_data_api[$y];
+        $completed_years_count++;
+    }
+    $predicted_deaths = $completed_years_count > 0 ? round($completed_years_sum / $completed_years_count, 1) : 0.0;
+
+    // Fallback simulation sekiranya tiada data sejarah langsung
+    if ($predicted_deaths == 0.0) {
+        $predicted_deaths = 15.0; 
+    }
 
     // Monthly rates
     $stmt_burials_12m = $pdo->query("SELECT COUNT(*) FROM maklumat_jenazah WHERE tarikh_wafat >= NOW() - INTERVAL '12 months'");
@@ -85,6 +148,7 @@ try {
 - Purata Pengebumian Sebulan: {$monthly_burial_rate} lot/bulan
 - Jangkaan Tempoh Penuh Kubur: {$remaining_years} tahun
 - Anggaran Kematian Setahun: {$predicted_deaths} kes
+- Jumlah Infaq Tahun Semasa: RM {$infaq_tahun_semasa}
 
 Formatkan jawapan anda dalam bentuk HTML (HANYA senarai teratur dengan tag <ol class='list-decimal pl-5 space-y-3'> dan <li>, serta teks tebal menggunakan <strong> untuk setiap cadangan). JANGAN sertakan tag ```html atau markdown luar. Berikan cadangan yang membina (contohnya: jika jangkaan kubur penuh adalah kurang dari 3-5 tahun, cadangkan fasa tanah baru segera; jika tunggakan yuran tinggi, cadangkan kempen kesedaran; jika ahli muda kurang, cadangkan kempen khairat keluarga). Tulis dalam Bahasa Melayu yang sopan, profesional, dan padat.";
 

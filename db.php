@@ -1,4 +1,7 @@
 <?php
+// Tetapkan zon masa lalai secara global ke waktu Malaysia (GMT+8)
+date_default_timezone_set('Asia/Kuala_Lumpur');
+
 // Periksa jika fail db_local.php wujud (hanya di local XAMPP anda)
 if (file_exists(__DIR__ . '/db_local.php')) {
     include __DIR__ . '/db_local.php';
@@ -16,26 +19,16 @@ if (file_exists(__DIR__ . '/db_local.php')) {
 
 try {
     $dsn = "pgsql:host=$host;port=$port;dbname=$dbname";
-    $pdo = new PDO($dsn, $user, $password);
+    $pdo = new PDO($dsn, $user, $password, [
+        PDO::ATTR_PERSISTENT => true,
+        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION
+    ]);
     
     if ($pdo) {
-        // Ensure updated_at column exists in tempahan table for the 24-hour expiration filter
-        $pdo->exec("ALTER TABLE tempahan ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP");
+        // Tetapkan zon masa pangkalan data PostgreSQL ke Malaysia
+        $pdo->exec("SET TIME ZONE 'Asia/Kuala_Lumpur'");
 
-        // Ensure infaq table exists
-        $pdo->exec("CREATE TABLE IF NOT EXISTS infaq (
-            id SERIAL PRIMARY KEY,
-            nama_penderma VARCHAR(255) DEFAULT 'Hamba Allah',
-            email VARCHAR(255) DEFAULT NULL,
-            no_telefon VARCHAR(50) DEFAULT NULL,
-            jumlah DECIMAL(10,2) NOT NULL,
-            kaedah_bayaran VARCHAR(50) NOT NULL,
-            tarikh_transaksi TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-            no_rujukan VARCHAR(100) NOT NULL
-        )");
-
-        // Ensure infaq_id column exists in bayaran table
-        $pdo->exec("ALTER TABLE bayaran ADD COLUMN IF NOT EXISTS infaq_id INTEGER REFERENCES infaq(id) ON DELETE SET NULL");
+        // Schema migrations have been successfully executed and the database is up to date.
     }
 } catch (PDOException $e) {
     echo $e->getMessage();

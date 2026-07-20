@@ -278,19 +278,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'get_recommendation') {
 $title = "Susun Atur Lot";
 require_once 'header.php';
 
-// Upgrade database if necessary to ensure image columns exist
-try {
-    $pdo->exec("ALTER TABLE lot_pusara ADD COLUMN IF NOT EXISTS gambar_kiri VARCHAR(255)");
-    $pdo->exec("ALTER TABLE lot_pusara ADD COLUMN IF NOT EXISTS gambar_kanan VARCHAR(255)");
-    $pdo->exec("ALTER TABLE lot_pusara ADD COLUMN IF NOT EXISTS gambar_penanda VARCHAR(255)");
-    $pdo->exec("ALTER TABLE lot_pusara ADD COLUMN IF NOT EXISTS gambar_kiri_desc VARCHAR(255)");
-    $pdo->exec("ALTER TABLE lot_pusara ADD COLUMN IF NOT EXISTS gambar_kanan_desc VARCHAR(255)");
-    $pdo->exec("ALTER TABLE lot_pusara ADD COLUMN IF NOT EXISTS gambar_penanda_desc VARCHAR(255)");
-    
-    // Kemas kini check constraint status_lot untuk membenarkan status Mendap dan Tidak Sesuai
-    $pdo->exec("ALTER TABLE lot_pusara DROP CONSTRAINT IF EXISTS lot_pusara_status_lot_check");
-    $pdo->exec("ALTER TABLE lot_pusara ADD CONSTRAINT lot_pusara_status_lot_check CHECK (status_lot IN ('Tersedia', 'Ditetapkan', 'Penuh', 'Mendap', 'Tidak Sesuai'))");
-} catch (Exception $ex) {}
+// Schema migrations for image columns and constraints are already applied.
 
 // Handle POST: Assign vacant lot, update guide photos, or update soil status
 $msg_success = '';
@@ -503,7 +491,8 @@ try {
                 $month_part = substr($ic, 2, 2);
                 $day_part = substr($ic, 4, 2);
                 $current_year = intval(date('Y'));
-                $century = ($year_part + 2000 > $current_year) ? 1900 : 2000;
+                $death_year = !empty($g['mati']) ? intval(date('Y', strtotime($g['mati']))) : $current_year;
+                $century = ($year_part + 2000 > $death_year) ? 1900 : 2000;
                 $year = $century + intval($year_part);
                 $lahir = "$day_part/$month_part/$year";
             }
@@ -1409,7 +1398,14 @@ function resetImgPreviews() {
 
 function updateSideCounts() {
     const totalCount = Object.keys(LOT_COORDS).length;
-    const occupiedCount = Object.keys(OCCUPIED_GRAVES).length;
+    let occupiedCount = 0;
+    
+    Object.values(OCCUPIED_GRAVES).forEach(g => {
+        if (g.status_lot === 'Penuh' || g.status_lot === 'Ditetapkan') {
+            occupiedCount++;
+        }
+    });
+    
     const emptyCount = totalCount - occupiedCount;
     
     const sbFilled = document.getElementById('sbFilledLots');

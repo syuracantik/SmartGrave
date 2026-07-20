@@ -61,11 +61,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
 // ── Normal page load ──────────────────────────────────────────────────────────
 $sort = $_GET['sort'] ?? 'latest';
-$order_by = "dk.created_at DESC";
+$order_by = "telah_meninggal ASC, dk.tarikh_daftar DESC, dk.id DESC";
 if ($sort === 'abjad') {
-    $order_by = "dk.nama_ahli ASC";
+    $order_by = "telah_meninggal ASC, dk.nama_ahli ASC";
 } elseif ($sort === 'lama') {
-    $order_by = "dk.created_at ASC";
+    $order_by = "telah_meninggal ASC, dk.tarikh_daftar ASC, dk.id ASC";
 }
 
 try {
@@ -82,6 +82,20 @@ try {
     $stmt  = $pdo->prepare($query);
     $stmt->execute();
     $ahli_khairat = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Dynamic current year yuran check for living members
+    $current_year = (int)date('Y');
+    foreach ($ahli_khairat as $key => $ahli) {
+        $is_deceased = !empty($ahli['telah_meninggal']);
+        if ($is_deceased) {
+            // Deceased members are ignored from active/arrears status
+            continue;
+        }
+        $reg_year = (int)date('Y', strtotime($ahli['tarikh_daftar']));
+        if ($ahli['status_yuran'] === 'Dibayar' && $reg_year < $current_year) {
+            $ahli_khairat[$key]['status_yuran'] = 'Tunggakan';
+        }
+    }
 } catch (PDOException $e) {
     die("Error: " . $e->getMessage());
 }
@@ -278,6 +292,40 @@ tbody tr:hover{
 
     /* Loading spinner on save button */
     .btn-saving { pointer-events:none; opacity:.7; }
+
+    /* Pagination Styles */
+    .pag-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 6px 12px;
+        font-size: 12px;
+        font-weight: 600;
+        color: #4b5563;
+        background: #ffffff;
+        border: 1px solid #e5e7eb;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: all 0.2s;
+        min-width: 32px;
+        height: 32px;
+    }
+    .pag-btn:hover:not(:disabled) {
+        background: #f3f4f6;
+        border-color: #d1d5db;
+        color: #111827;
+    }
+    .pag-btn:disabled {
+        background: #f9fafb;
+        color: #9ca3af;
+        cursor: not-allowed;
+        border-color: #f3f4f6;
+    }
+    .pag-btn.active {
+        background: #059669 !important;
+        border-color: #059669 !important;
+        color: #ffffff !important;
+    }
 </style>
 <?php include 'sidebar2.php'; ?>
 
@@ -402,8 +450,33 @@ tbody tr:hover{
                                         <span class="mono text-xs text-gray-600 searchable-ic cell-ic"><?php echo htmlspecialchars($ahli['no_ic']); ?></span>
                                     </td>
 
-                                    <td class="px-5 py-4">
-                                        <span class="mono text-xs text-gray-600 searchable-tel cell-tel"><?php echo htmlspecialchars($ahli['telefon']); ?></span>
+                                    <td class="px-5 py-4 cell-tel-td">
+                                        <div class="flex items-center gap-1.5">
+                                            <span class="mono text-xs text-gray-600 searchable-tel cell-tel"><?php echo htmlspecialchars($ahli['telefon']); ?></span>
+                                            <span class="cell-wa-wrapper">
+                                                <?php 
+                                                    $raw_tel = preg_replace('/[^0-9]/', '', $ahli['telefon']);
+                                                    if (!empty($raw_tel)) {
+                                                        if (strpos($raw_tel, '60') !== 0) {
+                                                            if (strpos($raw_tel, '0') === 0) {
+                                                                $raw_tel = '60' . substr($raw_tel, 1);
+                                                            } else {
+                                                                $raw_tel = '60' . $raw_tel;
+                                                            }
+                                                        }
+                                                        
+                                                        if ($ahli['status_yuran'] === 'Dibayar') {
+                                                            $wa_url = "https://wa.me/" . $raw_tel;
+                                                            echo '<a href="' . $wa_url . '" target="_blank" class="text-emerald-500 hover:text-emerald-700 transition" title="Hubungi via WhatsApp"><i class="fab fa-whatsapp text-sm"></i></a>';
+                                                        } else {
+                                                            $msg = "Assalamualaikum " . $ahli['nama_ahli'] . ", ini adalah peringatan mesra daripada pentadbir SmartGrave Bangi Lama bagi yuran khairat kematian tahun semasa (" . date('Y') . "). Sila abaikan jika sudah membuat pembayaran. Terima kasih!";
+                                                            $wa_url = "https://wa.me/" . $raw_tel . "?text=" . urlencode($msg);
+                                                            echo '<a href="' . $wa_url . '" target="_blank" class="inline-flex items-center gap-1 bg-emerald-600 hover:bg-emerald-700 text-white text-[9px] font-bold px-1.5 py-0.5 rounded shadow-sm transition" title="Hantar peringatan yuran di WhatsApp"><i class="fab fa-whatsapp"></i> Ingatkan</a>';
+                                                        }
+                                                    }
+                                                ?>
+                                            </span>
+                                        </div>
                                     </td>
 
                                     <td class="px-5 py-4 cell-status-td">
@@ -448,6 +521,14 @@ tbody tr:hover{
                     <i class="fas fa-magnifying-glass text-3xl mb-3 opacity-30 block"></i>
                     <p class="text-sm font-500">Tiada rekod sepadan dengan carian.</p>
                     <p class="text-xs mt-1 text-gray-300">Cuba kata kunci lain atau tukar penapis.</p>
+                </div>
+
+                <!-- Pagination Controls -->
+                <div class="px-5 py-4 border-t border-gray-100 flex items-center justify-between bg-white" id="paginationBar">
+                    <div class="text-xs text-gray-500">
+                        Memaparkan <span id="pagStart" class="font-600 text-gray-700">0</span> hingga <span id="pagEnd" class="font-600 text-gray-700">0</span> daripada <span id="pagTotal" class="font-600 text-gray-700">0</span> rekod
+                    </div>
+                    <div class="flex items-center gap-1" id="paginationPages"></div>
                 </div>
 
                 <!-- Table footer -->
@@ -618,41 +699,136 @@ function refreshCounters() {
 }
 
 // ── Search ─────────────────────────────────────────────────────────────────────
-function doSearch() {
-    const kw      = document.getElementById('searchInput').value.toLowerCase().trim();
+let currentPage = 1;
+const rowsPerPage = 10;
+
+function updatePagination() {
     const statusF = document.getElementById('statusFilter').value.toLowerCase();
-    const rows    = document.querySelectorAll('#tableBody tr[data-id]');
-    let visible   = 0;
+    const kw = document.getElementById('searchInput').value.toLowerCase().trim();
+    const rows = [...document.querySelectorAll('#tableBody tr[data-id]')];
+    
+    // Filter rows based on search parameters
+    const matchingRows = rows.filter(row => {
+        const nama = row.dataset.nama || '';
+        const ic = (row.dataset.ic || '').toLowerCase();
+        const tel = (row.dataset.tel || '').toLowerCase();
+        const status = row.dataset.status || '';
+        
+        const matchKw = !kw || nama.includes(kw) || ic.includes(kw) || tel.includes(kw);
+        const matchStatus = !statusF || status.toLowerCase() === statusF;
+        
+        return matchKw && matchStatus;
+    });
+
+    const totalMatching = matchingRows.length;
+    const totalPages = Math.ceil(totalMatching / rowsPerPage) || 1;
+
+    if (currentPage > totalPages) currentPage = totalPages;
+    if (currentPage < 1) currentPage = 1;
+
+    // Show/hide rows according to current page
+    const startIdx = (currentPage - 1) * rowsPerPage;
+    const endIdx = startIdx + rowsPerPage;
 
     rows.forEach(row => {
-        const nama   = row.dataset.nama   || '';
-        const ic     = (row.dataset.ic    || '').toLowerCase();
-        const tel    = (row.dataset.tel   || '').toLowerCase();
-        const status = row.dataset.status || '';
-        const matchKw     = !kw || nama.includes(kw) || ic.includes(kw) || tel.includes(kw);
-        const matchStatus = !statusF || status.toLowerCase() === statusF;
-
-        if (matchKw && matchStatus) {
+        const matchIdx = matchingRows.indexOf(row);
+        if (matchIdx >= startIdx && matchIdx < endIdx) {
             row.style.display = '';
-            visible++;
-            if (kw) {
-                highlightCell(row.querySelector('.searchable-nama'), kw);
-                highlightCell(row.querySelector('.searchable-ic'),  kw);
-                highlightCell(row.querySelector('.searchable-tel'), kw);
-            } else {
-                clearHighlight(row.querySelector('.searchable-nama'));
-                clearHighlight(row.querySelector('.searchable-ic'));
-                clearHighlight(row.querySelector('.searchable-tel'));
-            }
         } else {
             row.style.display = 'none';
         }
     });
 
-    document.getElementById('showCount').textContent = visible;
-    document.getElementById('emptyState').style.display = visible === 0 ? 'block' : 'none';
-    const sc = document.getElementById('showCount');
-    sc.classList.remove('pop'); void sc.offsetWidth; sc.classList.add('pop');
+    // Update pagination status text
+    document.getElementById('pagStart').textContent = totalMatching > 0 ? startIdx + 1 : 0;
+    document.getElementById('pagEnd').textContent = Math.min(endIdx, totalMatching);
+    document.getElementById('pagTotal').textContent = totalMatching;
+
+    // Generate pagination buttons
+    const container = document.getElementById('paginationPages');
+    container.innerHTML = '';
+
+    // Prev Button
+    const prevBtn = document.createElement('button');
+    prevBtn.className = 'pag-btn';
+    prevBtn.innerHTML = '<i class="fas fa-chevron-left"></i>';
+    prevBtn.disabled = currentPage === 1;
+    prevBtn.onclick = () => { currentPage--; updatePagination(); };
+    container.appendChild(prevBtn);
+
+    // Page numbers
+    let startPage = Math.max(1, currentPage - 2);
+    let endPage = Math.min(totalPages, currentPage + 2);
+
+    if (startPage > 1) {
+        const pBtn = document.createElement('button');
+        pBtn.className = 'pag-btn';
+        pBtn.textContent = '1';
+        pBtn.onclick = () => { currentPage = 1; updatePagination(); };
+        container.appendChild(pBtn);
+
+        if (startPage > 2) {
+            const dots = document.createElement('span');
+            dots.className = 'px-2 text-gray-400';
+            dots.textContent = '...';
+            container.appendChild(dots);
+        }
+    }
+
+    for (let i = startPage; i <= endPage; i++) {
+        const pBtn = document.createElement('button');
+        pBtn.className = 'pag-btn' + (i === currentPage ? ' active' : '');
+        pBtn.textContent = i;
+        pBtn.onclick = () => { currentPage = i; updatePagination(); };
+        container.appendChild(pBtn);
+    }
+
+    if (endPage < totalPages) {
+        if (endPage < totalPages - 1) {
+            const dots = document.createElement('span');
+            dots.className = 'px-2 text-gray-400';
+            dots.textContent = '...';
+            container.appendChild(dots);
+        }
+
+        const pBtn = document.createElement('button');
+        pBtn.className = 'pag-btn';
+        pBtn.textContent = totalPages;
+        pBtn.onclick = () => { currentPage = totalPages; updatePagination(); };
+        container.appendChild(pBtn);
+    }
+
+    // Next Button
+    const nextBtn = document.createElement('button');
+    nextBtn.className = 'pag-btn';
+    nextBtn.innerHTML = '<i class="fas fa-chevron-right"></i>';
+    nextBtn.disabled = currentPage === totalPages;
+    nextBtn.onclick = () => { currentPage++; updatePagination(); };
+    container.appendChild(nextBtn);
+
+    // Update record count
+    document.getElementById('showCount').textContent = totalMatching;
+    document.getElementById('emptyState').style.display = totalMatching === 0 ? 'block' : 'none';
+}
+
+function doSearch() {
+    const kw      = document.getElementById('searchInput').value.toLowerCase().trim();
+    const rows    = document.querySelectorAll('#tableBody tr[data-id]');
+
+    rows.forEach(row => {
+        if (kw) {
+            highlightCell(row.querySelector('.searchable-nama'), kw);
+            highlightCell(row.querySelector('.searchable-ic'),  kw);
+            highlightCell(row.querySelector('.searchable-tel'), kw);
+        } else {
+            clearHighlight(row.querySelector('.searchable-nama'));
+            clearHighlight(row.querySelector('.searchable-ic'));
+            clearHighlight(row.querySelector('.searchable-tel'));
+        }
+    });
+
+    currentPage = 1;
+    updatePagination();
 }
 
 function highlightCell(el, kw) {
@@ -740,6 +916,7 @@ async function saveEdit() {
             row.querySelector('.cell-tarikh').textContent    = formatDate(tarikh);
 
             // Status badge
+            // Status badge
             const td = row.querySelector('.cell-status-td');
             td.innerHTML = status === 'Dibayar'
                 ? '<span class="badge-bayar">Dibayar</span>'
@@ -759,7 +936,32 @@ async function saveEdit() {
             clearHighlight(row.querySelector('.searchable-ic'));
             clearHighlight(row.querySelector('.searchable-tel'));
 
+            // Update WA button in JS dynamically
+            const waWrapper = row.querySelector('.cell-wa-wrapper');
+            if (waWrapper) {
+                let rawTel = telefon.replace(/\D/g, '');
+                if (rawTel) {
+                    if (!rawTel.startsWith('60')) {
+                        if (rawTel.startsWith('0')) {
+                            rawTel = '60' + rawTel.substring(1);
+                        } else {
+                            rawTel = '60' + rawTel;
+                        }
+                    }
+                    if (status === 'Dibayar') {
+                        waWrapper.innerHTML = `<a href="https://wa.me/${rawTel}" target="_blank" class="text-emerald-500 hover:text-emerald-700 transition" title="Hubungi via WhatsApp"><i class="fab fa-whatsapp text-sm"></i></a>`;
+                    } else {
+                        const currentYear = new Date().getFullYear();
+                        const msg = `Assalamualaikum ${nama}, ini adalah peringatan mesra daripada pentadbir SmartGrave Bangi Lama bagi yuran khairat kematian tahun semasa (${currentYear}). Sila abaikan jika sudah membuat pembayaran. Terima kasih!`;
+                        waWrapper.innerHTML = `<a href="https://wa.me/${rawTel}?text=${encodeURIComponent(msg)}" target="_blank" class="inline-flex items-center gap-1 bg-emerald-600 hover:bg-emerald-700 text-white text-[9px] font-bold px-1.5 py-0.5 rounded shadow-sm transition" title="Hantar peringatan yuran di WhatsApp"><i class="fab fa-whatsapp"></i> Ingatkan</a>`;
+                    }
+                } else {
+                    waWrapper.innerHTML = '';
+                }
+            }
+
             refreshCounters();
+            updatePagination();
             closeEditModal();
             showToast('Rekod berjaya dikemaskini!', 'success');
 
@@ -861,6 +1063,9 @@ document.addEventListener('keydown', e => {
         closeConfirm();
     }
 });
+
+// Mulakan sistem pagination pada awal load halaman
+updatePagination();
 </script>
 </div> <!-- close flex-1 min-w-0 -->
 </div> <!-- close flex min-h-screen from header.php -->

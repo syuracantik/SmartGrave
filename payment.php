@@ -502,7 +502,7 @@ try {
                             <div style="margin-top: 1.5rem; padding: 1rem; background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 0.75rem; font-size: 0.8rem; text-align: center; color: #166534;">
                                 <p style="font-weight: 700; margin-bottom: 0.25rem;">Menghadapi masalah untuk membuat pembayaran?</p>
                                 <p style="margin-bottom: 0.5rem; color: #15803d; font-size: 0.75rem;">Sila hubungi pentadbir sistem melalui WhatsApp untuk bantuan segera.</p>
-                                <a href="https://wa.me/601112345678?text=Saya%20mengalami%20masalah%20ketika%20membuat%20pembayaran%20yuran/tempahan%20di%20SmartGrave" target="_blank" style="display: inline-flex; align-items: center; gap: 0.5rem; background-color: #16a34a; color: white; padding: 0.5rem 1rem; border-radius: 9999px; font-weight: 700; text-decoration: none; transition: background-color 0.2s;" onmouseover="this.style.backgroundColor='#15803d'" onmouseout="this.style.backgroundColor='#16a34a'">
+                                <a href="https://wa.me/601126923772?text=Saya%20mengalami%20masalah%20ketika%20membuat%20pembayaran%20yuran/tempahan%20di%20SmartGrave" target="_blank" style="display: inline-flex; align-items: center; gap: 0.5rem; background-color: #16a34a; color: white; padding: 0.5rem 1rem; border-radius: 9999px; font-weight: 700; text-decoration: none; transition: background-color 0.2s;" onmouseover="this.style.backgroundColor='#15803d'" onmouseout="this.style.backgroundColor='#16a34a'">
                                     <i class="fab fa-whatsapp" style="font-size: 1rem;"></i> Hubungi Admin WhatsApp
                                 </a>
                             </div>
@@ -658,8 +658,8 @@ try {
                         <div class="summary-item"><span class="s-label">Tempoh Perlindungan</span><span class="s-value">1 Tahun</span></div>
                         <div class="summary-item"><span class="s-label">Jenis Perlindungan</span><span class="s-value">Khairat Kematian</span></div>
                     <?php elseif ($type === 'booking'): ?>
-                        <div class="summary-item"><span class="s-label">Pengurusan Jenazah</span><span class="s-value">RM700.00</span></div>
-                        <div class="summary-item"><span class="s-label">Sewa Lot Pusara</span><span class="s-value">RM300.00</span></div>
+                        <div class="summary-item"><span class="s-label">Pengurusan Jenazah</span><span class="s-value">RM950.00</span></div>
+                        <div class="summary-item"><span class="s-label">Van jenazah</span><span class="s-value">RM50.00</span></div>
                         <div class="summary-item"><span class="s-label">Pentadbiran</span><span class="s-value">RM100.00</span></div>
                     <?php elseif ($type === 'infaq'): ?>
                         <div class="summary-item"><span class="s-label">Jenis Transaksi</span><span class="s-value">Sumbangan Infaq</span></div>
@@ -686,7 +686,7 @@ try {
                         if ($type === 'khairat') {
                             $benefits = ['Pengurusan jenazah percuma', 'Kafan & mandian', 'Pengurusan lot pusara', 'Sokongan 24 jam'];
                         } elseif ($type === 'booking') {
-                            $benefits = ['Pengurusan penuh jenazah', 'Kafan & mandian', 'Pengkebumian teratur', 'Sijil pengebumian'];
+                            $benefits = ['Pengurusan penuh jenazah', 'Kafan & mandian', 'Van jenazah', 'Pengkebumian teratur'];
                         } else {
                             $benefits = ['Menyumbang jariah berterusan', 'Membantu keluarga kurang mampu', 'Menyelesaikan fardu kifayah kariah', 'Pembersih harta & jiwa'];
                         }
