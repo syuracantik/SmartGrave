@@ -129,42 +129,50 @@ if (!function_exists('dapatkanSyorLot')) {
         $capacities = ['A' => 338, 'B' => 357, 'C' => 135];
         $cols_config = ['A' => 13, 'B' => 17, 'C' => 27];
         
-        $cols = $cols_config[$zon_sasaran] ?? 13;
         $total_lots = $capacities[$zon_sasaran] ?? 338;
-        $max_row = ($total_lots / $cols) - 1;
         
-        // Cari lot kosong bermula dari baris paling atas (paling dekat dengan pintu masuk) turun ke bawah
-        for ($r = $max_row; $r >= 0; $r--) {
-            for ($c = 0; $c < $cols; $c++) {
-                $n = $r * $cols + $c + 1;
-                $candidate_id = $zon_sasaran . str_pad($n, 3, '0', STR_PAD_LEFT);
-                $status = $non_vacant[$candidate_id] ?? 'Tersedia';
-                
-                if ($status === 'Tersedia') {
-                    return $candidate_id; // Kembalikan lot pertama yang kosong dalam baris teratas yang ada kekosongan
-                } else {
-                    if ($status === 'Mendap' || $status === 'Tidak Sesuai') {
-                        // Simpan lot mendap untuk dipaparkan dalam ulasan AI sebagai lot dilangkau
-                        $skipped_lots[] = $candidate_id . ' (' . ($status === 'Mendap' ? 'Mendap' : 'Tidak Sesuai') . ')';
-                    }
+        // Cari lot kosong yang paling jauh dari pintu masuk
+        $candidates = [];
+        for ($n = 1; $n <= $total_lots; $n++) {
+            $candidate_id = $zon_sasaran . str_pad($n, 3, '0', STR_PAD_LEFT);
+            $status = $non_vacant[$candidate_id] ?? 'Tersedia';
+            
+            if ($status === 'Tersedia') {
+                $dist = jarakKePintuPHP($candidate_id);
+                $candidates[$candidate_id] = $dist;
+            } else {
+                if ($status === 'Mendap' || $status === 'Tidak Sesuai') {
+                    $skipped_lots[] = $candidate_id . ' (' . ($status === 'Mendap' ? 'Mendap' : 'Tidak Sesuai') . ')';
                 }
             }
         }
         
-        // Fallback: jika zon sasaran penuh, cari di zon lain bermula dari baris teratas
+        if (!empty($candidates)) {
+            arsort($candidates);
+            return key($candidates);
+        }
+        
+        // Fallback: jika zon sasaran penuh, cari di zon lain yang paling jauh dari pintu masuk
         foreach ($capacities as $zon_key => $lim) {
             if ($zon_key === $zon_sasaran) continue;
-            $cl = $cols_config[$zon_key];
-            $mr = ($lim / $cl) - 1;
-            for ($r = $mr; $r >= 0; $r--) {
-                for ($c = 0; $c < $cl; $c++) {
-                    $n = $r * $cl + $c + 1;
-                    $candidate_id = $zon_key . str_pad($n, 3, '0', STR_PAD_LEFT);
-                    $status = $non_vacant[$candidate_id] ?? 'Tersedia';
-                    if ($status === 'Tersedia') {
-                        return $candidate_id;
+            
+            $fallback_candidates = [];
+            for ($n = 1; $n <= $lim; $n++) {
+                $candidate_id = $zon_key . str_pad($n, 3, '0', STR_PAD_LEFT);
+                $status = $non_vacant[$candidate_id] ?? 'Tersedia';
+                if ($status === 'Tersedia') {
+                    $dist = jarakKePintuPHP($candidate_id);
+                    $fallback_candidates[$candidate_id] = $dist;
+                } else {
+                    if ($status === 'Mendap' || $status === 'Tidak Sesuai') {
+                        $skipped_lots[] = $candidate_id . ' (' . ($status === 'Mendap' ? 'Mendap' : 'Tidak Sesuai') . ')';
                     }
                 }
+            }
+            
+            if (!empty($fallback_candidates)) {
+                arsort($fallback_candidates);
+                return key($fallback_candidates);
             }
         }
         
