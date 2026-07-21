@@ -438,11 +438,12 @@ require_once 'header.php';
         <!-- ── Toast Notifikasi ── -->
         <?php if (isset($_GET['berjaya'])): 
             $toast_wa_url = '';
+            $toast_digger_wa_url = '';
             if (isset($_GET['tempahan_id'])) {
                 $toast_tid = intval($_GET['tempahan_id']);
                 try {
                     $stmt_toast = $pdo->prepare("
-                        SELECT t.id, t.status_proses, t.ulasan_admin, u.no_telefon AS waris_tel, j.nama_jenazah, lp.no_lot AS lot_ditetapkan
+                        SELECT t.id, t.status_proses, t.ulasan_admin, u.no_telefon AS waris_tel, j.nama_jenazah, j.jantina, lp.no_lot AS lot_ditetapkan
                         FROM tempahan t
                         JOIN users u ON u.id = t.user_id
                         JOIN maklumat_jenazah j ON j.id = t.jenazah_id
@@ -465,6 +466,17 @@ require_once 'header.php';
                         if ($_GET['berjaya'] === 'lulus') {
                             $toast_lot = !empty($toast_row['lot_ditetapkan']) ? $toast_row['lot_ditetapkan'] : '—';
                             $toast_msg = "Assalamualaikum / Salam Sejahtera. Permohonan tempahan lot kubur #" . $toast_row['id'] . " bagi arwah " . $toast_row['nama_jenazah'] . " telah DILULUSKAN. Lot yang ditetapkan: " . $toast_lot . ". Anda kini boleh menyemak panduan navigasi di SmartGrave. Terima kasih.";
+                            
+                            // Bina pautan navigasi carian secara dinamik (berfungsi di local & Render)
+                            $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? "https://" : "http://";
+                            $domainName = $_SERVER['HTTP_HOST'];
+                            $basePath = str_replace('admin_dashboard.php', '', $_SERVER['SCRIPT_NAME']);
+                            $carian_url = $protocol . $domainName . $basePath . "carian.php?search=" . urlencode($toast_lot);
+
+                            // Mesej untuk Penggali Kubur
+                            $jantina_txt = !empty($toast_row['jantina']) ? $toast_row['jantina'] : '—';
+                            $toast_digger_msg = "Assalamualaikum. Mohon sediakan liang lahad untuk urusan pengebumian baharu:\n\nNama Arwah: " . $toast_row['nama_jenazah'] . "\nJantina: " . $jantina_txt . "\nLot Pusara: " . $toast_lot . "\n\nPeta Navigasi SmartGrave: " . $carian_url . "\n\nTerima kasih.";
+                            $toast_digger_wa_url = "https://wa.me/" . NO_TEL_PENGGALI . "?text=" . urlencode($toast_digger_msg);
                         } else {
                             $toast_sebab = !empty($toast_row['ulasan_admin']) ? $toast_row['ulasan_admin'] : 'Sebab-sebab tertentu';
                             $toast_msg = "Assalamualaikum / Salam Sejahtera. Permohonan tempahan lot kubur #" . $toast_row['id'] . " bagi arwah " . $toast_row['nama_jenazah'] . " terpaksa DITOLAK. Sebab: " . $toast_sebab . ". Sila hubungi kami jika ada pertanyaan. Terima kasih.";
@@ -474,7 +486,7 @@ require_once 'header.php';
                 } catch (Exception $ex) {}
             }
         ?>
-        <div class="toast" id="toastMsg" style="max-width: 400px; display: flex; flex-direction: column; gap: 0.5rem; align-items: flex-start;">
+        <div class="toast" id="toastMsg" style="max-width: 420px; display: flex; flex-direction: column; gap: 0.5rem; align-items: flex-start;">
             <div style="display: flex; align-items: center; gap: 0.75rem; width: 100%;">
                 <?php if ($_GET['berjaya'] === 'lulus'): ?>
                     <i class="fas fa-circle-check text-emerald-600 text-lg"></i>
@@ -486,10 +498,15 @@ require_once 'header.php';
                 <button onclick="this.parentElement.parentElement.remove()" style="background:none;border:none;cursor:pointer;color:#94a3b8;margin-left:auto;"><i class="fas fa-xmark"></i></button>
             </div>
             <?php if (!empty($toast_wa_url)): ?>
-            <div style="width: 100%; border-top: 1px solid #e2e8f0; padding-top: 0.5rem; display: flex; justify-content: flex-end;">
+            <div style="width: 100%; border-top: 1px solid #e2e8f0; padding-top: 0.5rem; display: flex; justify-content: flex-end; gap: 0.5rem;">
                 <a href="<?= $toast_wa_url ?>" target="_blank" class="btn-xs flex items-center gap-1.5" style="background: #25d366; color: white; border-radius: 0.5rem; padding: 0.35rem 0.75rem; text-decoration: none; font-size: 11px;">
-                    <i class="fab fa-whatsapp"></i> Maklumkan Waris via WhatsApp
+                    <i class="fab fa-whatsapp"></i> Maklumkan Waris
                 </a>
+                <?php if (!empty($toast_digger_wa_url)): ?>
+                <a href="<?= $toast_digger_wa_url ?>" target="_blank" class="btn-xs flex items-center gap-1.5" style="background: #0284c7; color: white; border-radius: 0.5rem; padding: 0.35rem 0.75rem; text-decoration: none; font-size: 11px;">
+                    <i class="fab fa-whatsapp"></i> Maklumkan Penggali
+                </a>
+                <?php endif; ?>
             </div>
             <?php endif; ?>
         </div>

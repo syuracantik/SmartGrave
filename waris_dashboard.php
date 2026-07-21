@@ -51,27 +51,57 @@ try {
 
         // Dynamically verify if they have registered Diri Sendiri and paid
         $stmt_check_khairat = $pdo->prepare("
-            SELECT COUNT(*) 
+            SELECT tarikh_daftar, status_yuran 
             FROM daftar_khairat 
             WHERE user_id = ? AND (hubungan = 'Diri Sendiri' OR hubungan = 'DIRI SENDIRI') AND status_yuran = 'Dibayar'
+            LIMIT 1
         ");
         $stmt_check_khairat->execute([$user_id]);
-        $has_active_khairat = $stmt_check_khairat->fetchColumn() > 0;
+        $khairat_info = $stmt_check_khairat->fetch(PDO::FETCH_ASSOC);
+        $has_active_khairat = ($khairat_info !== false);
 
         $is_member = false;
+        $is_mature = false;
         if ($has_active_khairat) {
             $is_member = true;
+            $tarikh_daftar = $khairat_info['tarikh_daftar'];
+            $valid_from = date('Y-m-d', strtotime($tarikh_daftar . ' + 1 month'));
+            if (date('Y-m-d') >= $valid_from) {
+                $is_mature = true;
+            }
             // Sync status_khairat in users table if not already true
             if (!$user['status_khairat']) {
                 $pdo->prepare("UPDATE users SET status_khairat = true WHERE id = ?")->execute([$user_id]);
             }
         } else {
             $is_member = ($user['status_khairat'] === true || $user['status_khairat'] === 1 || $user['status_khairat'] === 't');
+            if ($is_member) {
+                $stmt_reg_date = $pdo->prepare("
+                    SELECT tarikh_daftar FROM daftar_khairat 
+                    WHERE user_id = ? AND status_yuran = 'Dibayar' 
+                    ORDER BY tarikh_daftar ASC LIMIT 1
+                ");
+                $stmt_reg_date->execute([$user_id]);
+                $reg_date_val = $stmt_reg_date->fetchColumn();
+                if ($reg_date_val) {
+                    $valid_from = date('Y-m-d', strtotime($reg_date_val . ' + 1 month'));
+                    if (date('Y-m-d') >= $valid_from) {
+                        $is_mature = true;
+                    }
+                } else {
+                    $is_mature = true;
+                }
+            }
         }
 
         if ($is_member) {
-            $status_kariah  = "Ahli";
-            $kos_pengurusan = "0.00";
+            if ($is_mature) {
+                $status_kariah  = "Ahli";
+                $kos_pengurusan = "0.00";
+            } else {
+                $status_kariah  = "Ahli (Menunggu Kematangan)";
+                $kos_pengurusan = "1,100.00";
+            }
         } else {
             $status_kariah  = "Bukan Ahli";
             $kos_pengurusan = "1,100.00";

@@ -29,25 +29,54 @@ try {
         
         // Dynamically verify if they have registered Diri Sendiri and paid
         $stmt_check_khairat = $pdo->prepare("
-            SELECT COUNT(*) 
+            SELECT tarikh_daftar, status_yuran 
             FROM daftar_khairat 
             WHERE user_id = ? AND (hubungan = 'Diri Sendiri' OR hubungan = 'DIRI SENDIRI') AND status_yuran = 'Dibayar'
+            LIMIT 1
         ");
         $stmt_check_khairat->execute([$user_id]);
-        $has_active_khairat = $stmt_check_khairat->fetchColumn() > 0;
+        $khairat_info = $stmt_check_khairat->fetch(PDO::FETCH_ASSOC);
+        $has_active_khairat = ($khairat_info !== false);
 
         $is_member = false;
+        $is_mature = false;
         if ($has_active_khairat) {
             $is_member = true;
+            $tarikh_daftar = $khairat_info['tarikh_daftar'];
+            $valid_from = date('Y-m-d', strtotime($tarikh_daftar . ' + 1 month'));
+            if (date('Y-m-d') >= $valid_from) {
+                $is_mature = true;
+            }
             if (!$user['status_khairat']) {
                 $pdo->prepare("UPDATE users SET status_khairat = true WHERE id = ?")->execute([$user_id]);
             }
         } else {
             $is_member = ($user['status_khairat'] === true || $user['status_khairat'] === 1 || $user['status_khairat'] === 't');
+            if ($is_member) {
+                $stmt_reg_date = $pdo->prepare("
+                    SELECT tarikh_daftar FROM daftar_khairat 
+                    WHERE user_id = ? AND status_yuran = 'Dibayar' 
+                    ORDER BY tarikh_daftar ASC LIMIT 1
+                ");
+                $stmt_reg_date->execute([$user_id]);
+                $reg_date_val = $stmt_reg_date->fetchColumn();
+                if ($reg_date_val) {
+                    $valid_from = date('Y-m-d', strtotime($reg_date_val . ' + 1 month'));
+                    if (date('Y-m-d') >= $valid_from) {
+                        $is_mature = true;
+                    }
+                } else {
+                    $is_mature = true;
+                }
+            }
         }
 
         if ($is_member) {
-            $status_kariah  = "Ahli";
+            if ($is_mature) {
+                $status_kariah  = "Ahli";
+            } else {
+                $status_kariah  = "Ahli (Menunggu Kematangan)";
+            }
         } else {
             $status_kariah  = "Bukan Ahli";
         }
@@ -64,10 +93,14 @@ try {
 if (isset($_GET['check_ic'])) {
     header('Content-Type: application/json');
     $ic_check = preg_replace('/[^0-9]/', '', trim($_GET['check_ic']));
+    $tarikh_wafat = isset($_GET['tarikh_wafat']) ? trim($_GET['tarikh_wafat']) : '';
+    if (empty($tarikh_wafat)) {
+        $tarikh_wafat = date('Y-m-d');
+    }
     if (strlen($ic_check) === 12) {
         try {
             $stmtIC = $pdo->prepare("
-                SELECT nama_ahli, status_yuran 
+                SELECT nama_ahli, status_yuran, tarikh_daftar 
                 FROM daftar_khairat 
                 WHERE no_ic = ? 
                 LIMIT 1
@@ -75,7 +108,19 @@ if (isset($_GET['check_ic'])) {
             $stmtIC->execute([$ic_check]);
             $row = $stmtIC->fetch(PDO::FETCH_ASSOC);
             if ($row && $row['status_yuran'] === 'Dibayar') {
-                echo json_encode(['registered' => true, 'nama' => $row['nama_ahli']]);
+                $tarikh_daftar = $row['tarikh_daftar'];
+                $valid_from = date('Y-m-d', strtotime($tarikh_daftar . ' + 1 month'));
+                if ($tarikh_wafat >= $valid_from) {
+                    echo json_encode(['registered' => true, 'nama' => $row['nama_ahli']]);
+                } else {
+                    echo json_encode([
+                        'registered' => false, 
+                        'nama' => $row['nama_ahli'], 
+                        'status' => 'Belum Matang', 
+                        'tarikh_daftar' => $tarikh_daftar,
+                        'valid_from' => $valid_from
+                    ]);
+                }
             } elseif ($row) {
                 echo json_encode(['registered' => false, 'nama' => $row['nama_ahli'], 'status' => $row['status_yuran']]);
             } else {
@@ -374,7 +419,7 @@ include 'sidebar.php';
  
                     <div class="group">
                         <label class="block text-xs font-semibold text-emerald-700 uppercase tracking-wider mb-3">Tarikh Kematian <span class="text-rose-500">*</span></label>
-                        <input type="date" name="tarikh_wafat" onclick="this.showPicker()"
+                        <input type="date" name="tarikh_wafat" id="tarikhWafat" onclick="this.showPicker()"
                                class="w-full px-5 py-4 bg-gray-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none text-sm font-medium transition-all" required
                                value="<?php echo htmlspecialchars($tarikh_wafat_val); ?>">
                     </div>
@@ -561,13 +606,26 @@ function checkKhairat(digits) {
     icPill.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Menyemak...';
     icBox.classList.remove('hidden');
 
-    fetch('booking.php?check_ic=' + encodeURIComponent(digits))
+    const tarikhWafatInput = document.getElementById('tarikhWafat');
+    const tarikhWafat = tarikhWafatInput ? tarikhWafatInput.value : '';
+
+    fetch('booking.php?check_ic=' + encodeURIComponent(digits) + '&tarikh_wafat=' + encodeURIComponent(tarikhWafat))
         .then(r => r.json())
         .then(data => {
             if (data.registered) {
                 icPill.className = 'inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800';
                 icPill.innerHTML = '<i class="fas fa-shield-check"></i> Ahli Khairat Aktif — Pengebumian PERCUMA';
                 document.getElementById('submitBtn').textContent = 'Teruskan ke Pembayaran — RM 0.00 (Ahli Khairat)';
+            } else if (data.status === 'Belum Matang') {
+                icPill.className = 'inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-800';
+                // format date to dd/mm/yyyy
+                const validDate = new Date(data.valid_from);
+                const day = String(validDate.getDate()).padStart(2, '0');
+                const month = String(validDate.getMonth() + 1).padStart(2, '0');
+                const year = validDate.getFullYear();
+                const formattedValidDate = `${day}/${month}/${year}`;
+                icPill.innerHTML = `<i class="fas fa-exclamation-circle"></i> Keahlian Khairat Belum Cukup 1 Bulan (Layak: ${formattedValidDate}) — RM1,100.00 dikenakan`;
+                resetBtnText();
             } else if (data.nama) {
                 icPill.className = 'inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-700';
                 icPill.innerHTML = '<i class="fas fa-clock"></i> Yuran Khairat Belum Dibayar — RM1,100.00 dikenakan';
@@ -579,6 +637,17 @@ function checkKhairat(digits) {
             }
         })
         .catch(() => icBox.classList.add('hidden'));
+}
+
+// Re-check khairat status if tarikh_wafat changes
+const tarikhWafatInput = document.getElementById('tarikhWafat');
+if (tarikhWafatInput) {
+    tarikhWafatInput.addEventListener('change', function() {
+        let digits = icInput.value.replace(/\D/g, '').slice(0, 12);
+        if (digits.length === 12) {
+            checkKhairat(digits);
+        }
+    });
 }
 
 function resetBtnText() {

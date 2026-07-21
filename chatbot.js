@@ -16,9 +16,8 @@ document.addEventListener("DOMContentLoaded", () => {
             right: 24px;
             z-index: 9999;
             font-family: 'Inter', sans-serif;
-            display: flex;
-            flex-direction: column;
-            align-items: flex-end;
+            width: 60px;
+            height: 60px;
             pointer-events: none;
         }
 
@@ -112,6 +111,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
         /* Chat Panel */
         .chat-panel {
+            position: absolute;
+            bottom: 80px;
+            right: 0;
             width: 380px;
             height: 580px;
             max-height: calc(100vh - 120px);
@@ -124,7 +126,6 @@ document.addEventListener("DOMContentLoaded", () => {
             display: flex;
             flex-direction: column;
             overflow: hidden;
-            margin-bottom: 16px;
             transform: scale(0.8) translateY(50px);
             opacity: 0;
             pointer-events: none;
@@ -531,10 +532,146 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Paparkan jawapan selamat datang pertama dengan markdown terformat (Sudah dipra-format dalam HTML di atas)
 
+    // Drag and Drop functionality for Chatbot Button (and container)
+    let wasDragged = false;
+    let dragThreshold = 6;
+
+    // Mouse Dragging
+    chatTriggerBtn.addEventListener("mousedown", (e) => {
+        if (e.button !== 0) return; // Only left click
+        e.preventDefault();
+
+        const startX = e.clientX;
+        const startY = e.clientY;
+
+        const container = document.getElementById("smartgrave-chatbot");
+        const rect = container.getBoundingClientRect();
+        const startLeft = rect.left;
+        const startTop = rect.top;
+
+        let isDragging = false;
+        wasDragged = false;
+
+        function onMouseMove(moveEvent) {
+            const dx = moveEvent.clientX - startX;
+            const dy = moveEvent.clientY - startY;
+
+            if (Math.abs(dx) > dragThreshold || Math.abs(dy) > dragThreshold) {
+                isDragging = true;
+                wasDragged = true;
+            }
+
+            if (isDragging) {
+                let left = startLeft + dx;
+                let top = startTop + dy;
+
+                const minX = 10;
+                const minY = 10;
+                const maxX = window.innerWidth - rect.width - 10;
+                const maxY = window.innerHeight - rect.height - 10;
+
+                left = Math.max(minX, Math.min(maxX, left));
+                top = Math.max(minY, Math.min(maxY, top));
+
+                container.style.bottom = 'auto';
+                container.style.right = 'auto';
+                container.style.left = left + 'px';
+                container.style.top = top + 'px';
+            }
+        }
+
+        function onMouseUp() {
+            document.removeEventListener("mousemove", onMouseMove);
+            document.removeEventListener("mouseup", onMouseUp);
+        }
+
+        document.addEventListener("mousemove", onMouseMove);
+        document.addEventListener("mouseup", onMouseUp);
+    });
+
+    // Touch Dragging (Mobile)
+    chatTriggerBtn.addEventListener("touchstart", (e) => {
+        const touch = e.touches[0];
+        const startX = touch.clientX;
+        const startY = touch.clientY;
+
+        const container = document.getElementById("smartgrave-chatbot");
+        const rect = container.getBoundingClientRect();
+        const startLeft = rect.left;
+        const startTop = rect.top;
+
+        let isDragging = false;
+        wasDragged = false;
+
+        function onTouchMove(moveEvent) {
+            const touch = moveEvent.touches[0];
+            const dx = touch.clientX - startX;
+            const dy = touch.clientY - startY;
+
+            if (Math.abs(dx) > dragThreshold || Math.abs(dy) > dragThreshold) {
+                isDragging = true;
+                wasDragged = true;
+            }
+
+            if (isDragging) {
+                if (moveEvent.cancelable) moveEvent.preventDefault();
+
+                let left = startLeft + dx;
+                let top = startTop + dy;
+
+                const minX = 10;
+                const minY = 10;
+                const maxX = window.innerWidth - rect.width - 10;
+                const maxY = window.innerHeight - rect.height - 10;
+
+                left = Math.max(minX, Math.min(maxX, left));
+                top = Math.max(minY, Math.min(maxY, top));
+
+                container.style.bottom = 'auto';
+                container.style.right = 'auto';
+                container.style.left = left + 'px';
+                container.style.top = top + 'px';
+            }
+        }
+
+        function onTouchEnd() {
+            document.removeEventListener("touchmove", onTouchMove);
+            document.removeEventListener("touchend", onTouchEnd);
+        }
+
+        document.addEventListener("touchmove", onTouchMove, { passive: false });
+        document.addEventListener("touchend", onTouchEnd);
+    });
+
     // Toggle Chat Panel
-    chatTriggerBtn.addEventListener("click", () => {
+    chatTriggerBtn.addEventListener("click", (e) => {
+        if (wasDragged) {
+            wasDragged = false;
+            return;
+        }
         isWidgetOpened = !isWidgetOpened;
         if (isWidgetOpened) {
+            // Align the panel based on screen position
+            const container = document.getElementById("smartgrave-chatbot");
+            const rect = container.getBoundingClientRect();
+            
+            if (window.innerWidth <= 480) {
+                // On mobile, align relative to viewport to prevent clipping
+                chatPanel.style.left = `calc(-${rect.left}px + 12px)`;
+                chatPanel.style.right = 'auto';
+                chatPanel.style.transformOrigin = 'bottom center';
+            } else {
+                if (rect.left < window.innerWidth / 2) {
+                    chatPanel.style.right = 'auto';
+                    chatPanel.style.left = '0';
+                    chatPanel.style.transformOrigin = 'bottom left';
+                } else {
+                    chatPanel.style.left = 'auto';
+                    chatPanel.style.right = '0';
+                    chatPanel.style.transformOrigin = 'bottom right';
+                }
+            }
+
             chatPanel.classList.add("open");
             chatTriggerBtn.classList.add("active");
             chatBadge.style.display = "none"; // Hide badge once opened

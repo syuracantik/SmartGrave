@@ -89,21 +89,41 @@ try {
 
         // Check if the deceased (jenazah) is a registered and paid khairat member
         $stmt_check_jenazah = $pdo->prepare("
-            SELECT COUNT(*) 
+            SELECT tarikh_daftar, status_yuran 
             FROM daftar_khairat 
             WHERE no_ic = ? AND status_yuran = 'Dibayar'
+            LIMIT 1
         ");
         $stmt_check_jenazah->execute([$data['no_ic']]);
-        $is_jenazah_ahli = $stmt_check_jenazah->fetchColumn() > 0;
+        $khairat_member = $stmt_check_jenazah->fetch(PDO::FETCH_ASSOC);
+
+        $is_jenazah_ahli = false;
+        $is_under_waiting_period = false;
+        $valid_from_date = '';
+        if ($khairat_member) {
+            $tarikh_daftar = $khairat_member['tarikh_daftar'];
+            $tarikh_wafat = $data['tarikh_wafat'];
+            $valid_from = date('Y-m-d', strtotime($tarikh_daftar . ' + 1 month'));
+            if ($tarikh_wafat >= $valid_from) {
+                $is_jenazah_ahli = true;
+            } else {
+                $is_under_waiting_period = true;
+                $valid_from_date = date('d/m/Y', strtotime($valid_from));
+            }
+        }
 
         if ($is_jenazah_ahli) {
             $amaun_bayaran = 0;
+            $page_desc = "Bagi jenazah: " . htmlspecialchars($data['nama_jenazah']) . " <span class='text-emerald-600 font-bold'>(Ahli Khairat - Ditanggung Sepenuhnya)</span>";
+        } elseif ($is_under_waiting_period) {
+            $amaun_bayaran = YURAN_BOOKING;
+            $page_desc = "Bagi jenazah: " . htmlspecialchars($data['nama_jenazah']) . " <br><span class='text-rose-600 font-semibold'>(Keahlian khairat belum matang. Kurang 1 bulan dari tarikh daftar. Mula layak: " . $valid_from_date . ")</span>";
         } else {
             $amaun_bayaran = YURAN_BOOKING;
+            $page_desc = "Bagi jenazah: " . htmlspecialchars($data['nama_jenazah']);
         }
 
         $page_title    = "Pembayaran Tempahan Lot Pusara";
-        $page_desc     = "Bagi jenazah: " . htmlspecialchars($data['nama_jenazah']) . ($is_jenazah_ahli ? " <span class='text-emerald-600 font-bold'>(Ahli Khairat - Ditanggung Sepenuhnya)</span>" : "");
 
     } elseif ($type === 'infaq') {
         $infaq_amount = floatval($_GET['amount'] ?? 0);
@@ -658,9 +678,16 @@ try {
                         <div class="summary-item"><span class="s-label">Tempoh Perlindungan</span><span class="s-value">1 Tahun</span></div>
                         <div class="summary-item"><span class="s-label">Jenis Perlindungan</span><span class="s-value">Khairat Kematian</span></div>
                     <?php elseif ($type === 'booking'): ?>
-                        <div class="summary-item"><span class="s-label">Pengurusan Jenazah</span><span class="s-value">RM950.00</span></div>
-                        <div class="summary-item"><span class="s-label">Van jenazah</span><span class="s-value">RM50.00</span></div>
-                        <div class="summary-item"><span class="s-label">Pentadbiran</span><span class="s-value">RM100.00</span></div>
+                        <?php if ($amaun_bayaran == 0): ?>
+                            <div class="summary-item"><span class="s-label">Pengurusan Jenazah</span><span class="s-value" style="text-decoration: line-through; color: var(--slate-400);">RM950.00</span></div>
+                            <div class="summary-item"><span class="s-label">Van jenazah</span><span class="s-value" style="text-decoration: line-through; color: var(--slate-400);">RM50.00</span></div>
+                            <div class="summary-item"><span class="s-label">Pentadbiran</span><span class="s-value" style="text-decoration: line-through; color: var(--slate-400);">RM100.00</span></div>
+                            <div class="summary-item text-emerald-700 font-bold"><span class="s-label">Subsidi Khairat</span><span class="s-value">-RM1,100.00</span></div>
+                        <?php else: ?>
+                            <div class="summary-item"><span class="s-label">Pengurusan Jenazah</span><span class="s-value">RM950.00</span></div>
+                            <div class="summary-item"><span class="s-label">Van jenazah</span><span class="s-value">RM50.00</span></div>
+                            <div class="summary-item"><span class="s-label">Pentadbiran</span><span class="s-value">RM100.00</span></div>
+                        <?php endif; ?>
                     <?php elseif ($type === 'infaq'): ?>
                         <div class="summary-item"><span class="s-label">Jenis Transaksi</span><span class="s-value">Sumbangan Infaq</span></div>
                         <div class="summary-item"><span class="s-label">Penderma</span><span class="s-value"><?php echo htmlspecialchars($data['nama_penderma'] ?? 'HAMBA ALLAH'); ?></span></div>

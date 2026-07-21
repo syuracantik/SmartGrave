@@ -37,4 +37,7 @@ try {
 // Gemini AI Config
 define('GEMINI_API_KEY', $gemini_api_key);
 define('GEMINI_MODEL', $gemini_model);
+
+// No. Telefon Penggali Kubur (Boleh ditukar)
+define('NO_TEL_PENGGALI', '601126923772');
 ?>
